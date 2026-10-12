@@ -1,0 +1,14 @@
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Datos privados (los paquetes completos NO se publican)
+data/privado/
+data/distritos_nacional/
+*.parquet
+*.fgb
+
+# Python
+__pycache__/
+*.pyc
+.venv/

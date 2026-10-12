@@ -1,0 +1,35 @@
+[
+ {
+  "ubigeo": "040702",
+  "distrito": "COCACHACRA",
+  "provincia": "ISLAY",
+  "departamento": "AREQUIPA",
+  "n_predios": 4455,
+  "area_total_m2": 716464812.48,
+  "archivo": "data/distritos/040702.geojson",
+  "bytes_geojson": 2995667,
+  "demo": true
+ },
+ {
+  "ubigeo": "040706",
+  "distrito": "PUNTA DE BOMBON",
+  "provincia": "ISLAY",
+  "departamento": "AREQUIPA",
+  "n_predios": 4706,
+  "area_total_m2": 902254751.41,
+  "archivo": "data/distritos/040706.geojson",
+  "bytes_geojson": 3491872,
+  "demo": true
+ },
+ {
+  "ubigeo": "150101",
+  "distrito": "LIMA",
+  "provincia": "LIMA",
+  "departamento": "LIMA",
+  "n_predios": 18815,
+  "area_total_m2": 35751338.12,
+  "archivo": "data/distritos/150101.geojson",
+  "bytes_geojson": 11664629,
+  "demo": true
+ }
+]
