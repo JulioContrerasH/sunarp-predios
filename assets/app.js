@@ -52,6 +52,10 @@ function normalizeType(t) {
   return TYPE_COLORS[padded] ? padded : '99';
 }
 
+function normaliza(s) {
+  return (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 function formatNumber(n) {
   return new Intl.NumberFormat('es-PE').format(Math.round(n));
 }
@@ -250,7 +254,7 @@ class App {
   }
 
   onSearch(query) {
-    const q = query.trim().toLowerCase();
+    const q = normaliza(query.trim());
     this.ui.clear.hidden = !q;
     if (!q) {
       this.ui.results.hidden = true;
@@ -259,9 +263,9 @@ class App {
     }
     const matches = this.districts
       .filter(d =>
-        d.distrito.toLowerCase().includes(q) ||
-        d.provincia.toLowerCase().includes(q) ||
-        d.departamento.toLowerCase().includes(q) ||
+        normaliza(d.distrito).includes(q) ||
+        normaliza(d.provincia).includes(q) ||
+        normaliza(d.departamento).includes(q) ||
         d.ubigeo.includes(q)
       )
       .slice(0, 8);
