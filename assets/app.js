@@ -225,6 +225,9 @@ class App {
     this.ui.layer.addEventListener('click', () => this.toggleBaseLayer());
     this.ui.locate.addEventListener('click', () => this.fitCurrent());
 
+    if (!API && this.ui.downloadSubsetParquet) {
+      this.ui.downloadSubsetParquet.hidden = true;
+    }
     if (window.matchMedia('(max-width: 720px)').matches) {
       this.ui.search.placeholder = 'Distrito…';
     }
@@ -1107,11 +1110,29 @@ class App {
   }
 
   async _descargarArea(formato, ext) {
+    const nombre = `area_${(this.areaNombre || 'seleccion')}_predios.${ext}`;
+    // Sin API: se arma el archivo en el navegador con lo que está en pantalla
+    if (!API || !API_KEY) {
+      if (!this.subset || !this.subset.length) {
+        alert('No hay predios que descargar.');
+        return;
+      }
+      const fc = { type: 'FeatureCollection', features: this.subset };
+      if (formato === 'geojson') {
+        downloadBlob(new Blob([JSON.stringify(fc)], { type: 'application/geo+json' }), nombre);
+      } else if (formato === 'csv') {
+        const filas = featuresToCsvRows(this.subset);
+        downloadBlob(new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' }), nombre);
+      } else {
+        alert('Ese formato necesita el servidor. Usa GeoJSON, CSV o Excel (o el distrito completo en el buscador).');
+      }
+      return;
+    }
     if (!this.areaGeojson) {
       if (!this.subset || !this.subset.length) return;
       const blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: this.subset })],
                             { type: 'application/geo+json' });
-      downloadBlob(blob, `area_${(this.areaNombre || 'seleccion')}_predios.${ext}`);
+      downloadBlob(blob, nombre);
       return;
     }
     const boton = document.activeElement;
