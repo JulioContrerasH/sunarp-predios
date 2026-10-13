@@ -450,12 +450,7 @@ class App {
       aviso.className = 'aviso-vista-previa';
       this.ui.panelContent.prepend(aviso);
     }
-    if (this.limitado) {
-      aviso.hidden = false;
-      aviso.textContent = `Vista previa: ${formatNumber(this.currentFeatures.length)} de ${formatNumber(this.current.n_predios)} predios. La descarga completa está disponible con un plan de pago.`;
-    } else {
-      aviso.hidden = true;
-    }
+    aviso.hidden = true;
   }
 
   enrichFeatures() {
@@ -915,10 +910,7 @@ class App {
       p.innerHTML = 'Ningún predio intersecta tu área.';
       return;
     }
-    p.innerHTML = `<strong id="upload-count">${formatNumber(n)}</strong> predios intersectan tu área.` +
-      (this.subsetLimitado
-        ? ` <span class="aviso-inline">(vista previa limitada a ${formatNumber(LIMITE_VISTA_PREVIA)}; el total va con plan de pago)</span>`
-        : '');
+    p.innerHTML = `<strong id="upload-count">${formatNumber(n)}</strong> predios intersectan tu área.`;
     if (this.map.getLayer('predios-fill')) {
       const ids = this.subset.map(f => f.id).filter(id => id !== undefined);
       if (ids.length) {

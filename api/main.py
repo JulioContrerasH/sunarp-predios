@@ -95,7 +95,7 @@ def _limite_efectivo(request: Request, limite: int | None) -> int:
 def _limite_plan(api_key: str) -> int:
     """Tope de filas por respuesta segun el plan de la clave."""
     plan = (claves.get(api_key) or {}).get("plan", "demo")
-    return {"demo": 2000, "test": 100000}.get(plan, 50000)
+    return {"demo": 2000, "test": 100000, "interno": 500000}.get(plan, 50000)
 
 
 def _verificar_cuota(api_key: str) -> int | None:
