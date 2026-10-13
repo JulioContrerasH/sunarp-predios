@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.1.0/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="assets/styles.css?v=20261013b" />
+  <link rel="stylesheet" href="assets/styles.css?v=20261013c" />
 </head>
 <body>
   <header class="site-header">
@@ -58,6 +58,10 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
               <span>Subir archivo</span>
             </label>
+            <button class="btn btn-secondary" id="tiles-btn" title="Ver los predios de todo el país al navegar">
+              <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><path fill="currentColor" d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+              Ver todo el país
+            </button>
             <button class="btn btn-secondary" id="draw-btn" title="Dibuja un polígono en el mapa">
               <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
               Dibujar área
@@ -141,7 +145,7 @@
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatbush@4.2.0/flatbush.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
-  <script type="module" src="assets/app.js?v=20261013b"></script>
-  <script src="config.js?v=20261013b"></script>
+  <script type="module" src="assets/app.js?v=20261013c"></script>
+  <script src="config.js?v=20261013c"></script>
 </body>
 </html>

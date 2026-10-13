@@ -144,6 +144,7 @@ class App {
       downloadGeojson: document.getElementById('download-geojson'),
       downloadShp: document.getElementById('download-shp'),
       drawBtn: document.getElementById('draw-btn'),
+      tilesBtn: document.getElementById('tiles-btn'),
       drawHint: document.getElementById('draw-hint'),
       drawCancel: document.getElementById('draw-cancel'),
       downloadCsv: document.getElementById('download-csv'),
@@ -174,6 +175,9 @@ class App {
     this.map = new maplibregl.Map({
       container: 'map',
       style: BASE_VECTOR,
+      transformRequest: (url) => (API && url.startsWith(API))
+        ? { url, headers: { 'X-API-Key': API_KEY } }
+        : { url },
       center: [-76.2, -10.5],
       zoom: 5,
       attributionControl: true
@@ -246,6 +250,7 @@ class App {
 
     this.ui.upload.addEventListener('change', (e) => this.onUpload(e));
     this.ui.drawBtn.addEventListener('click', () => this.iniciarDibujo());
+    this.ui.tilesBtn.addEventListener('click', () => this.toggleTeselas());
     this.ui.drawCancel.addEventListener('click', () => this.cancelarDibujo());
     this.ui.downloadSubsetGeojson.addEventListener('click', () => this.downloadSubsetGeojson());
     this.ui.downloadSubsetCsv.addEventListener('click', () => this.downloadSubsetCsv());
@@ -762,6 +767,51 @@ class App {
     XLSX.utils.book_append_sheet(wb, ws, 'Predios');
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${this.current.ubigeo}_${this.current.distrito}.xlsx`);
+  }
+
+  toggleTeselas() {
+    if (!API || !API_KEY) {
+      alert('Las teselas necesitan la API configurada.');
+      return;
+    }
+    const activo = this.map.getLayer('pais-fill') !== undefined;
+    if (activo) {
+      for (const capa of ['pais-fill', 'pais-line']) {
+        if (this.map.getLayer(capa)) this.map.removeLayer(capa);
+      }
+      if (this.map.getSource('pais')) this.map.removeSource('pais');
+      this.ui.tilesBtn.classList.remove('activo');
+      return;
+    }
+    this.map.addSource('pais', {
+      type: 'vector',
+      tiles: [`${API}/tiles/{z}/{x}/{y}.mvt`],
+      minzoom: 8,
+      maxzoom: 18
+    });
+    const antes = this.map.getLayer('predios-fill') ? 'predios-fill'
+      : (this.map.getLayer(SAT_LAYER) ? SAT_LAYER : undefined);
+    this.map.addLayer({
+      id: 'pais-fill',
+      type: 'fill',
+      source: 'pais',
+      'source-layer': 'predios',
+      minzoom: 8,
+      paint: { 'fill-color': '#7c3aed', 'fill-opacity': 0.45 }
+    }, antes);
+    this.map.addLayer({
+      id: 'pais-line',
+      type: 'line',
+      source: 'pais',
+      'source-layer': 'predios',
+      minzoom: 8,
+      paint: {
+        'line-color': '#4c1d95',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 14, 0.6, 18, 0.9],
+        'line-opacity': 0.6
+      }
+    }, antes);
+    this.ui.tilesBtn.classList.add('activo');
   }
 
   iniciarDibujo() {
