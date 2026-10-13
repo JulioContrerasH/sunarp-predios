@@ -762,3 +762,8 @@ svg { display: block; }
     color: #fde68a;
   }
 }
+
+.aviso-inline {
+  color: #92400e;
+  font-size: 11px;
+}

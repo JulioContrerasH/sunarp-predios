@@ -147,10 +147,18 @@ def _extraer_geometria_geojson(data: dict[str, Any]) -> dict[str, Any]:
         features = data.get("features", [])
         if not features:
             raise ValueError("FeatureCollection vacía")
-        geom = features[0].get("geometry")
-        if not geom:
-            raise ValueError("El primer Feature no tiene geometría")
-        return geom
+        anillos: list = []
+        for f in features:
+            g = f.get("geometry") or {}
+            if g.get("type") == "Polygon":
+                anillos.append(g.get("coordinates"))
+            elif g.get("type") == "MultiPolygon":
+                anillos.extend(g.get("coordinates") or [])
+        if not anillos:
+            raise ValueError("La colección no tiene polígonos")
+        if len(anillos) == 1:
+            return {"type": "Polygon", "coordinates": anillos[0]}
+        return {"type": "MultiPolygon", "coordinates": anillos}
     if tipo == "Feature":
         geom = data.get("geometry")
         if not geom:

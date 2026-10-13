@@ -755,16 +755,6 @@ class App {
   async onUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    if (!this.current) {
-      alert('Primero selecciona un distrito para comparar.');
-      this.ui.upload.value = '';
-      return;
-    }
-    if (!this.currentFeatures.length) {
-      alert('El distrito aún no tiene predios cargados.');
-      this.ui.upload.value = '';
-      return;
-    }
 
     let uploaded;
     try {
@@ -772,8 +762,7 @@ class App {
       if (file.name.toLowerCase().endsWith('.zip')) {
         uploaded = await shp(buffer);
       } else {
-        const text = new TextDecoder().decode(buffer);
-        uploaded = JSON.parse(text);
+        uploaded = JSON.parse(new TextDecoder().decode(buffer));
       }
     } catch (err) {
       console.error(err);
@@ -788,58 +777,105 @@ class App {
       this.ui.upload.value = '';
       return;
     }
-
     const inputFc = { type: 'FeatureCollection', features: inputFeatures };
-    const inputBbox = turf.bbox(inputFc);
+    this.areaNombre = file.name.replace(/\.(geojson|json|zip)$/i, '');
 
-    // Stage 1: bbox filter with flatbush.
+    if (API && API_KEY) {
+      await this.buscarPorArea(inputFc);
+      return;
+    }
+
+    // Sin API: interseccion local contra el distrito cargado
+    if (!this.current || !this.currentFeatures.length) {
+      alert('Sin API configurada solo se puede comparar contra el distrito cargado.');
+      this.ui.upload.value = '';
+      return;
+    }
+    const inputBbox = turf.bbox(inputFc);
     let candidates = this.currentFeatures;
     if (this.flatbush) {
       const ids = this.flatbush.search(inputBbox[0], inputBbox[1], inputBbox[2], inputBbox[3]);
       candidates = ids.map(i => this.currentFeatures[i]);
     }
-
-    // Stage 2: precise intersection with turf.
     const intersecting = [];
     for (const f of candidates) {
       try {
         if (turf.booleanIntersects(f, inputFc)) intersecting.push(f);
-      } catch (_) {
-        // Skip invalid geometries.
-      }
+      } catch (_) { /* geometria invalida */ }
     }
-
     this.subset = intersecting;
-    this.ui.uploadCount.textContent = formatNumber(intersecting.length);
-    this.ui.uploadResult.hidden = false;
+    this.subsetLimitado = false;
+    this.mostrarResultadoArea();
+  }
 
-    if (!intersecting.length) {
-      this.ui.uploadResult.querySelector('p').innerHTML = 'Ningún predio del distrito intersecta tu área.';
-    } else {
-      this.ui.uploadResult.querySelector('p').innerHTML = `<strong id="upload-count">${formatNumber(intersecting.length)}</strong> predios intersectan tu área.`;
+  async buscarPorArea(inputFc) {
+    this.setLoading(true);
+    try {
+      const url = `${API}/predios?formato=geojson&limite=${LIMITE_VISTA_PREVIA}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify(inputFc)
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const fc = await res.json();
+      this.subset = fc.features || [];
+      this.subsetLimitado = this.subset.length >= LIMITE_VISTA_PREVIA;
+      this.mostrarResultadoArea();
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo consultar el área. Inténtalo de nuevo.');
+    } finally {
+      this.setLoading(false);
+    }
+  }
+
+  mostrarResultadoArea() {
+    const n = this.subset.length;
+    this.ui.uploadCount.textContent = formatNumber(n);
+    this.ui.uploadResult.hidden = false;
+    const p = this.ui.uploadResult.querySelector('p');
+    if (!n) {
+      p.innerHTML = 'Ningún predio intersecta tu área.';
+      return;
+    }
+    p.innerHTML = `<strong id="upload-count">${formatNumber(n)}</strong> predios intersectan tu área.` +
+      (this.subsetLimitado
+        ? ` <span class="aviso-inline">(vista previa limitada a ${formatNumber(LIMITE_VISTA_PREVIA)}; el total va con plan de pago)</span>`
+        : '');
+    if (this.map.getLayer('predios-fill')) {
+      const ids = this.subset.map(f => f.id).filter(id => id !== undefined);
+      if (ids.length) {
+        this.map.setFilter('predios-hover', ['in', ['id'], ['literal', ids.slice(0, 500)]]);
+        setTimeout(() => {
+          if (this.map.getLayer('predios-hover')) {
+            this.map.setFilter('predios-hover', ['boolean', false]);
+          }
+        }, 4000);
+      }
     }
   }
 
   downloadSubsetGeojson() {
-    if (!this.subset.length) return;
+    if (!this.subset || !this.subset.length) return;
     const blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: this.subset })], { type: 'application/geo+json' });
-    downloadBlob(blob, `${this.current.ubigeo}_${this.current.distrito}_seleccion.geojson`);
+    downloadBlob(blob, `area_${(this.areaNombre || 'seleccion')}_predios.geojson`);
   }
 
   downloadSubsetCsv() {
-    if (!this.subset.length) return;
+    if (!this.subset || !this.subset.length) return;
     const rows = featuresToCsvRows(this.subset);
     const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    downloadBlob(blob, `${this.current.ubigeo}_${this.current.distrito}_seleccion.csv`);
+    downloadBlob(blob, `area_${(this.areaNombre || 'seleccion')}_predios.csv`);
   }
 
   downloadSubsetXlsx() {
-    if (!this.subset.length) return;
+    if (!this.subset || !this.subset.length) return;
     const ws = featuresToWorksheet(this.subset);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Seleccion');
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${this.current.ubigeo}_${this.current.distrito}_seleccion.xlsx`);
+    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `area_${(this.areaNombre || 'seleccion')}_predios.xlsx`);
   }
 }
 
