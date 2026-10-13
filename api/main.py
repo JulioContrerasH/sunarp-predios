@@ -336,19 +336,11 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["X-API-Key", "Content-Type"],
     expose_headers=["X-Cuota-Restante", "X-Total-Predios"],
+    allow_private_network=True,
 )
 
 
 RUTAS_LIBRES = {"/", "/docs", "/redoc", "/openapi.json", "/favicon.ico"}
-
-
-@app.middleware("http")
-async def red_privada_middleware(request: Request, call_next):
-    """Permite el acceso desde una pagina publica a esta red privada (PNA)."""
-    respuesta = await call_next(request)
-    if request.headers.get("Access-Control-Request-Private-Network") == "true":
-        respuesta.headers["Access-Control-Allow-Private-Network"] = "true"
-    return respuesta
 
 
 @app.middleware("http")
