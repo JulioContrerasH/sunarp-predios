@@ -292,8 +292,12 @@ class App {
   }
 
   async cargarFgb(url, max) {
+    // la libreria exige un rect: el del Peru (el indice espacial del FGB filtra)
+    const rect = this.current && this.current.bbox
+      ? this.current.bbox
+      : { minX: -81.5, minY: -18.5, maxX: -68.4, maxY: 0.5 };
     const feats = [];
-    for await (const f of flatgeobuf.deserialize(url)) {
+    for await (const f of flatgeobuf.deserialize(url, rect)) {
       feats.push(f);
       if (feats.length >= max) break;
     }
