@@ -911,17 +911,34 @@ class App {
       return;
     }
     p.innerHTML = `<strong id="upload-count">${formatNumber(n)}</strong> predios intersectan tu área.`;
-    if (this.map.getLayer('predios-fill')) {
-      const ids = this.subset.map(f => f.id).filter(id => id !== undefined);
-      if (ids.length) {
-        this.map.setFilter('predios-hover', ['in', ['id'], ['literal', ids.slice(0, 500)]]);
-        setTimeout(() => {
-          if (this.map.getLayer('predios-hover')) {
-            this.map.setFilter('predios-hover', ['boolean', false]);
-          }
-        }, 4000);
-      }
+    this.pintarResultadoArea();
+  }
+
+  pintarResultadoArea() {
+    const srcId = 'area-resultado';
+    for (const capa of [srcId + '-line', srcId + '-fill']) {
+      if (this.map.getLayer(capa)) this.map.removeLayer(capa);
     }
+    if (this.map.getSource(srcId)) this.map.removeSource(srcId);
+    if (!this.subset || !this.subset.length) return;
+
+    this.map.addSource(srcId, {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: this.subset }
+    });
+    this.map.addLayer({
+      id: srcId + '-fill', type: 'fill', source: srcId,
+      paint: { 'fill-color': '#f59e0b', 'fill-opacity': 0.5 }
+    });
+    this.map.addLayer({
+      id: srcId + '-line', type: 'line', source: srcId,
+      paint: { 'line-color': '#b45309', 'line-width': 1.4 }
+    });
+    try {
+      const bbox = turf.bbox({ type: 'FeatureCollection', features: this.subset });
+      this.map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]],
+                         { padding: 70, duration: 800, maxZoom: 16 });
+    } catch (_) { /* bbox invalido */ }
   }
 
   downloadSubsetGeojson() {

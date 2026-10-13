@@ -794,3 +794,5 @@ svg { display: block; }
 }
 
 .upload-section { margin-bottom: 18px; }
+
+.upload-result p { margin: 0 0 8px; font-size: 13px; }
