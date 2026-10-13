@@ -802,3 +802,5 @@ svg { display: block; }
   background: var(--accent-soft);
   color: var(--accent);
 }
+
+.progreso { color: var(--text-muted); font-size: 13px; }

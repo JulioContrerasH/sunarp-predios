@@ -638,6 +638,13 @@ class App {
     }).join('');
   }
 
+  progreso(texto) {
+    if (!this.ui.uploadResult) return;
+    this.ui.uploadResult.hidden = false;
+    const p = this.ui.uploadResult.querySelector('p');
+    if (p) p.innerHTML = `<span class="progreso">${texto}</span>`;
+  }
+
   setLoading(loading) {
     this.ui.title.style.opacity = loading ? '0.6' : '1';
   }
@@ -991,18 +998,20 @@ class App {
     const bbox = turf.bbox(inputFc);
     const rect = { minX: bbox[0], minY: bbox[1], maxX: bbox[2], maxY: bbox[3] };
     const distritos = [];
-    console.log('LOCAL rect', JSON.stringify(rect));
+    this.progreso('Buscando distritos que tocan tu área…');
     for await (const d of flatgeobuf.deserialize(`${R2}/sunarp/capas/distritos_capa.fgb`, rect)) {
       try {
         if (turf.booleanIntersects(d, inputFc)) distritos.push(d);
       } catch (_) { /* geometria invalida */ }
     }
-    console.log('LOCAL distritos', distritos.length);
     const vistos = new Set();
     const salida = [];
     const tope = LIMITE_MAPA_CFG * 2;
+    let hechos = 0;
     for (const d of distritos) {
       const ubigeo = d.properties.UBIGEO;
+      hechos++;
+      this.progreso(`Analizando ${d.properties.distrito} (${hechos}/${distritos.length})… ${salida.length} predios`);
       try {
         for await (const f of flatgeobuf.deserialize(`${R2}/sunarp/distritos/${ubigeo}.fgb`, rect)) {
           const clave = `${f.properties.PART_REG}|${f.properties.OID}`;
@@ -1017,7 +1026,6 @@ class App {
       } catch (err) {
         console.warn('distrito', ubigeo, err);
       }
-      console.log('LOCAL tras', ubigeo, salida.length);
       if (salida.length >= tope) break;
     }
     return { type: 'FeatureCollection', features: salida };
@@ -1028,9 +1036,7 @@ class App {
     try {
       this.areaGeojson = inputFc;
       if (R2 && !API) {
-        console.log('AREA-R2 inicio');
         const fc = await this.buscarPorAreaLocal(inputFc);
-        console.log('AREA-R2 resultado', fc.features.length);
         this.subset = fc.features.slice(0, LIMITE_MAPA_CFG);
         this.subsetTotal = fc.features.length;
         this.subsetLimitado = fc.features.length > this.subset.length;
