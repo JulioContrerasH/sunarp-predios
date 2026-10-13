@@ -1,0 +1,9 @@
+{
+  "pon-una-clave-larga-y-aleatoria": {
+    "nombre": "Cliente de ejemplo",
+    "plan": "basico",
+    "cuota_diaria": 500,
+    "usada_hoy": 0,
+    "fecha": "2026-01-01"
+  }
+}

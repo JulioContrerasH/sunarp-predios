@@ -12,3 +12,6 @@ data/distritos_nacional/
 __pycache__/
 *.pyc
 .venv/
+
+# Claves de API (nunca al repo)
+api/claves.json
