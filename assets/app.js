@@ -479,10 +479,12 @@ class App {
     this.map.setPaintProperty('predios-fill', 'fill-opacity', sat ? 0.18 : 0.35);
     this.map.setPaintProperty('predios-line', 'line-color', sat ? '#22d3ee' : '#334155');
     this.map.setPaintProperty('predios-line', 'line-width',
-      sat ? ['interpolate', ['linear'], ['zoom'], 10, 1.3, 14, 2.2, 18, 2.6]
+      sat ? ['interpolate', ['linear'], ['zoom'], 10, 1.6, 13, 1.2, 15, 0.9, 18, 0.8]
           : ['interpolate', ['linear'], ['zoom'], 10, 0.4, 14, 0.8, 18, 1.2]);
     this.map.setPaintProperty('predios-line', 'line-opacity', sat ? 0.95 : 0.45);
-    this.map.setPaintProperty('predios-halo', 'line-opacity', sat ? 0.55 : 0);
+    this.map.setPaintProperty('predios-halo', 'line-opacity',
+      sat ? ['interpolate', ['linear'], ['zoom'], 10, 0.55, 14, 0.35, 16, 0]
+          : 0);
   }
 
   fitCurrent() {
