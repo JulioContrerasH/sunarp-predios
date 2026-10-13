@@ -335,6 +335,8 @@ class App {
     const readd = () => {
       if (this.current && this.currentFeatures.length && !this.map.getLayer('predios-fill')) {
         this.renderDistrictLayer();
+      } else {
+        this.applyPaintForMode();
       }
     };
     this.map.once('style.load', readd);
@@ -403,11 +405,13 @@ class App {
   renderDistrictLayer() {
     const sourceId = 'predios';
     const fillId = 'predios-fill';
+    const haloId = 'predios-halo';
     const lineId = 'predios-line';
     const hoverId = 'predios-hover';
 
     if (this.map.getLayer(hoverId)) this.map.removeLayer(hoverId);
     if (this.map.getLayer(lineId)) this.map.removeLayer(lineId);
+    if (this.map.getLayer(haloId)) this.map.removeLayer(haloId);
     if (this.map.getLayer(fillId)) this.map.removeLayer(fillId);
     if (this.map.getSource(sourceId)) this.map.removeSource(sourceId);
 
@@ -428,6 +432,17 @@ class App {
       paint: {
         'fill-color': match,
         'fill-opacity': 0.35
+      }
+    });
+
+    this.map.addLayer({
+      id: haloId,
+      type: 'line',
+      source: sourceId,
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.0, 14, 2.2, 18, 3.0],
+        'line-opacity': 0
       }
     });
 
@@ -454,7 +469,20 @@ class App {
       }
     });
 
+    this.applyPaintForMode();
     this.fitCurrent();
+  }
+
+  applyPaintForMode() {
+    if (!this.map.getLayer('predios-fill')) return;
+    const sat = this.baseMode === 'satellite';
+    this.map.setPaintProperty('predios-fill', 'fill-opacity', sat ? 0.18 : 0.35);
+    this.map.setPaintProperty('predios-line', 'line-color', sat ? '#22d3ee' : '#334155');
+    this.map.setPaintProperty('predios-line', 'line-width',
+      sat ? ['interpolate', ['linear'], ['zoom'], 10, 1.3, 14, 2.2, 18, 2.6]
+          : ['interpolate', ['linear'], ['zoom'], 10, 0.4, 14, 0.8, 18, 1.2]);
+    this.map.setPaintProperty('predios-line', 'line-opacity', sat ? 0.95 : 0.45);
+    this.map.setPaintProperty('predios-halo', 'line-opacity', sat ? 0.55 : 0);
   }
 
   fitCurrent() {
