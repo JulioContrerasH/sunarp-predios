@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.1.0/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="assets/styles.css?v=20261014j" />
+  <link rel="stylesheet" href="assets/styles.css?v=20261014k" />
 </head>
 <body>
   <header class="site-header">
@@ -52,16 +52,18 @@
           </div>
           <p class="upload-help">Sube un GeoJSON o Shapefile (.zip), o dibuja el área en el mapa.
           Te devuelve solo los predios de tu área, aunque cruce varios distritos.</p>
+          <div class="zona-soltar" id="zona-soltar">
+            <input id="upload-file" type="file" accept=".geojson,.json,.zip,.shp,.dbf,.shx,.prj" multiple />
+            <svg viewBox="0 0 24 24" aria-hidden="true" width="26" height="26"><path fill="currentColor" d="M19 15v4H5v-4H3v6h18v-6h-2zM11 3v9.6L7.4 9 6 10.4l6 6 6-6L16.6 9 13 12.6V3h-2z"/></svg>
+            <span class="zona-texto">Arrastra tu shapefile aquí</span>
+            <span class="zona-sub">(.shp + .dbf + .shx, o un .zip, o GeoJSON) — o haz clic para elegirlo</span>
+          </div>
           <div class="area-acciones">
-            <label class="file-input">
-              <input id="upload-file" type="file" accept=".geojson,.json,.zip" />
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-              <span>Subir archivo</span>
-            </label>
             <button class="btn btn-secondary" id="tiles-btn" title="Ver los predios de todo el país al navegar">
               <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><path fill="currentColor" d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
               Ver todo el país
             </button>
+            <button class="btn btn-secondary" id="quitar-area" title="Quitar el área cargada y sus resultados" hidden>Quitar área</button>
             <button class="btn btn-secondary" id="draw-btn" title="Dibuja un polígono en el mapa">
               <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
               Dibujar área
@@ -147,7 +149,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatgeobuf@3.33.0/dist/flatgeobuf-geojson.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatbush@4.2.0/flatbush.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
-  <script type="module" src="assets/app.js?v=20261014j"></script>
-  <script src="config.js?v=20261014j"></script>
+  <script type="module" src="assets/app.js?v=20261014k"></script>
+  <script src="config.js?v=20261014k"></script>
 </body>
 </html>

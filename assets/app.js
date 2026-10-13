@@ -146,6 +146,8 @@ class App {
       downloadGeojson: document.getElementById('download-geojson'),
       downloadShp: document.getElementById('download-shp'),
       drawBtn: document.getElementById('draw-btn'),
+      zonaSoltar: document.getElementById('zona-soltar'),
+      quitarArea: document.getElementById('quitar-area'),
       tilesBtn: document.getElementById('tiles-btn'),
       drawHint: document.getElementById('draw-hint'),
       drawCancel: document.getElementById('draw-cancel'),
@@ -252,6 +254,21 @@ class App {
     this.ui.downloadXlsx.addEventListener('click', () => this.downloadXlsx());
 
     this.ui.upload.addEventListener('change', (e) => this.onUpload(e));
+    this.ui.zonaSoltar.addEventListener('click', (e) => {
+      if (e.target.id !== 'upload-file') this.ui.upload.click();
+    });
+    ['dragenter', 'dragover'].forEach(ev => this.ui.zonaSoltar.addEventListener(ev, (e) => {
+      e.preventDefault(); this.ui.zonaSoltar.classList.add('sobre');
+    }));
+    ['dragleave', 'drop'].forEach(ev => this.ui.zonaSoltar.addEventListener(ev, () => {
+      this.ui.zonaSoltar.classList.remove('sobre');
+    }));
+    this.ui.zonaSoltar.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const archivos = Array.from(e.dataTransfer.files || []);
+      if (archivos.length) this.procesarArchivos(archivos);
+    });
+    this.ui.quitarArea.addEventListener('click', () => this.quitarAreaCargada());
     this.ui.drawBtn.addEventListener('click', () => this.iniciarDibujo());
     this.ui.tilesBtn.addEventListener('click', () => this.toggleTeselas());
     this.ui.drawCancel.addEventListener('click', () => this.cancelarDibujo());
@@ -934,21 +951,42 @@ class App {
   }
 
   async onUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const archivos = Array.from(e.target.files || []);
+    if (!archivos.length) return;
+    await this.procesarArchivos(archivos);
+    this.ui.upload.value = '';
+  }
 
+  async leerArchivos(archivos) {
+    const buscar = (ext) => archivos.find(f => f.name.toLowerCase().endsWith(ext));
+    const zip = buscar('.zip');
+    if (zip) return await shp(await zip.arrayBuffer());
+
+    const shpFile = buscar('.shp');
+    if (shpFile) {
+      const prjFile = buscar('.prj');
+      const dbfFile = buscar('.dbf');
+      const geo = shp.parseShp(await shpFile.arrayBuffer(),
+                              prjFile ? await prjFile.text() : null);
+      if (dbfFile) {
+        const dbf = shp.parseDbf(await dbfFile.arrayBuffer());
+        return shp.combine([geo, dbf]);
+      }
+      return geo;
+    }
+
+    const json = buscar('.geojson') || buscar('.json');
+    if (json) return JSON.parse(await json.text());
+    throw new Error('No se reconoce el archivo');
+  }
+
+  async procesarArchivos(archivos) {
     let uploaded;
     try {
-      const buffer = await file.arrayBuffer();
-      if (file.name.toLowerCase().endsWith('.zip')) {
-        uploaded = await shp(buffer);
-      } else {
-        uploaded = JSON.parse(new TextDecoder().decode(buffer));
-      }
+      uploaded = await this.leerArchivos(archivos);
     } catch (err) {
       console.error(err);
-      alert('No se pudo leer el archivo. Verifica que sea un GeoJSON o .zip de Shapefile válido.');
-      this.ui.upload.value = '';
+      alert('No se pudo leer. Sube un GeoJSON, un .zip de shapefile, o los 4 archivos (.shp, .dbf, .shx, .prj) juntos.');
       return;
     }
 
@@ -1034,10 +1072,50 @@ class App {
     return { type: 'FeatureCollection', features: salida };
   }
 
+  pintarAreaEntrada(inputFc) {
+    const srcId = 'area-entrada';
+    for (const capa of [srcId + '-line', srcId + '-fill']) {
+      if (this.map.getLayer(capa)) this.map.removeLayer(capa);
+    }
+    if (this.map.getSource(srcId)) this.map.removeSource(srcId);
+    if (inputFc) {
+      this.map.addSource(srcId, { type: 'geojson', data: inputFc });
+      this.map.addLayer({
+        id: srcId + '-fill', type: 'fill', source: srcId,
+        paint: { 'fill-color': '#0891b2', 'fill-opacity': 0.12 }
+      });
+      this.map.addLayer({
+        id: srcId + '-line', type: 'line', source: srcId,
+        paint: { 'line-color': '#0e7490', 'line-width': 2, 'line-dasharray': [2, 1.4] }
+      });
+      try {
+        const b = turf.bbox(inputFc);
+        this.map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 60, duration: 700, maxZoom: 15 });
+      } catch (_) { /* bbox invalido */ }
+    }
+    if (this.ui.quitarArea) this.ui.quitarArea.hidden = !inputFc;
+  }
+
+  quitarAreaCargada() {
+    for (const capa of ['area-entrada-line', 'area-entrada-fill', 'area-resultado-line', 'area-resultado-fill']) {
+      if (this.map.getLayer(capa)) this.map.removeLayer(capa);
+    }
+    for (const fuente of ['area-entrada', 'area-resultado']) {
+      if (this.map.getSource(fuente)) this.map.removeSource(fuente);
+    }
+    this.subset = [];
+    this.subsetTotal = 0;
+    this.areaGeojson = null;
+    this.ui.uploadResult.hidden = true;
+    if (this.ui.quitarArea) this.ui.quitarArea.hidden = true;
+    this.cancelarDibujo();
+  }
+
   async buscarPorArea(inputFc) {
     this.setLoading(true);
     try {
       this.areaGeojson = inputFc;
+      this.pintarAreaEntrada(inputFc);
       if (R2 && !API) {
         const fc = await this.buscarPorAreaLocal(inputFc);
         this.subset = fc.features.slice(0, LIMITE_MAPA_CFG);
