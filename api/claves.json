@@ -1,0 +1,9 @@
+{
+  "dev-demo-2026": {
+    "nombre": "Desarrollo local",
+    "plan": "demo",
+    "cuota_diaria": 200,
+    "usada_hoy": 0,
+    "fecha": "2026-10-13"
+  }
+}
