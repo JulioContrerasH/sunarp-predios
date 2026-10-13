@@ -4,6 +4,7 @@ const INDEX_URL = 'data/distritos/index.json';
 const API = (window.SUNARP_CONFIG || {}).API_URL || '';
 const API_KEY = (window.SUNARP_CONFIG || {}).API_KEY || '';
 const R2 = (window.SUNARP_CONFIG || {}).R2_URL || '';
+const PMTILES_URL = (window.SUNARP_CONFIG || {}).PMTILES_URL || '';
 const LIMITE_MAPA_CFG = (window.SUNARP_CONFIG || {}).LIMITE_MAPA || 30000;
 const LIMITE_MAPA = 3000;   // maximo de predios que se pintan en el mapa (evita crashear)
 const BASE_VECTOR = 'https://tiles.openfreemap.org/styles/bright';
@@ -804,8 +805,8 @@ class App {
   }
 
   toggleTeselas() {
-    if (!API || !API_KEY) {
-      alert('Las teselas necesitan la API configurada.');
+    if (!API && !PMTILES_URL) {
+      alert('Las teselas estarán disponibles en unos minutos (generándose en el servidor).');
       return;
     }
     const activo = this.map.getLayer('pais-fill') !== undefined;
@@ -817,12 +818,16 @@ class App {
       this.ui.tilesBtn.classList.remove('activo');
       return;
     }
-    this.map.addSource('pais', {
-      type: 'vector',
-      tiles: [`${API}/tiles/{z}/{x}/{y}.mvt?api_key=${encodeURIComponent(API_KEY)}`],
-      minzoom: 8,
-      maxzoom: 18
-    });
+    if (PMTILES_URL) {
+      this.map.addSource('pais', { type: 'vector', url: `pmtiles://${PMTILES_URL}`, minzoom: 11, maxzoom: 15 });
+    } else {
+      this.map.addSource('pais', {
+        type: 'vector',
+        tiles: [`${API}/tiles/{z}/{x}/{y}.mvt?api_key=${encodeURIComponent(API_KEY)}`],
+        minzoom: 8,
+        maxzoom: 18
+      });
+    }
     const antes = this.map.getLayer('predios-fill') ? 'predios-fill'
       : (this.map.getLayer(SAT_LAYER) ? SAT_LAYER : undefined);
     this.map.addLayer({
@@ -849,9 +854,12 @@ class App {
       }
     }, antes);
     this.ui.tilesBtn.classList.add('activo');
-    if (this.map.getZoom() < 10) {
-      // a zoom de país no hay detalle: acercarse a una zona con predios
-      this.map.flyTo({ center: [-77.03, -12.05], zoom: 12, duration: 2000 });
+    if (this.map.getZoom() < 11) {
+      // a zoom de pais no hay detalle: acercarse, respetando donde esta mirando
+      const c = this.map.getCenter();
+      const enPeru = c.lng > -81.5 && c.lng < -68.4 && c.lat > -18.5 && c.lat < 0.5;
+      this.map.flyTo({ center: enPeru ? [c.lng, c.lat] : [-77.03, -12.05],
+                       zoom: 12, duration: 2000 });
     }
   }
 
