@@ -799,7 +799,7 @@ class App {
       minzoom: 8,
       paint: {
         'fill-color': '#7c3aed',
-        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.12, 11, 0.18, 13, 0.26, 16, 0.38]
+        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.10, 11, 0.13, 13, 0.17, 16, 0.30]
       }
     }, antes);
     this.map.addLayer({
