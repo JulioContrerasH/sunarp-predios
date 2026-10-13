@@ -614,15 +614,18 @@ class App {
   }
 
   mostrarDetalle(lngLat, p) {
+    const filas = [
+      ['Oficina', p.COD_OFRE],
+      ['Tipo', TYPE_LABELS[p._tip] || p._tip],
+      ['Área', p.GEO_AREA ? formatNumber(p.GEO_AREA) + ' m²' : ''],
+      ['Fecha título', p.FEC_TIT_F],
+      ['Asiento', p.ASIENTO_REG],
+      ['Nº título', p.NUM_TIT],
+      ['Dirección', p.DIR_REG],
+    ].filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '—');
     const html = `
       <h3 class="popup-title">Predio ${p.PART_REG || '—'}</h3>
-      <div class="popup-row"><span class="label">Oficina</span><span class="value">${p.COD_OFRE || '—'}</span></div>
-      <div class="popup-row"><span class="label">Tipo</span><span class="value">${TYPE_LABELS[p._tip] || p._tip}</span></div>
-      <div class="popup-row"><span class="label">Área</span><span class="value">${p.GEO_AREA ? formatNumber(p.GEO_AREA) + ' m²' : '—'}</span></div>
-      <div class="popup-row"><span class="label">Fecha título</span><span class="value">${p.FEC_TIT_F || '—'}</span></div>
-      <div class="popup-row"><span class="label">Asiento</span><span class="value">${p.ASIENTO_REG || '—'}</span></div>
-      <div class="popup-row"><span class="label">Nº título</span><span class="value">${p.NUM_TIT || '—'}</span></div>
-      <div class="popup-row"><span class="label">Dirección</span><span class="value">${p.DIR_REG || '—'}</span></div>
+      ${filas.map(([k, v]) => `<div class="popup-row"><span class="label">${k}</span><span class="value">${v}</span></div>`).join('')}
     `;
     this.closePopup();
     this.popup = new maplibregl.Popup({ maxWidth: '320px', anchor: 'bottom' })
