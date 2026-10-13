@@ -787,7 +787,7 @@ class App {
     }
     this.map.addSource('pais', {
       type: 'vector',
-      tiles: [`${API}/tiles/{z}/{x}/{y}.mvt`],
+      tiles: [`${API}/tiles/{z}/{x}/{y}.mvt?api_key=${encodeURIComponent(API_KEY)}`],
       minzoom: 8,
       maxzoom: 18
     });
