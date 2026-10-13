@@ -197,6 +197,15 @@ def _resultados_a_geojson(rows: list[tuple], column_names: list[str]) -> dict[st
     return {"type": "FeatureCollection", "features": features, "total": len(features)}
 
 
+def _contar_predios(poligono_wkt: str) -> int:
+    """Total de predios que intersectan (barato con el indice espacial)."""
+    fila = db.execute(
+        "SELECT COUNT(*) FROM predios WHERE ST_Intersects(geometry, ST_GeomFromText(?))",
+        [poligono_wkt],
+    ).fetchone()
+    return int(fila[0]) if fila else 0
+
+
 def _consultar_predios(poligono_wkt: str, formato: str, limite: int | None):
     """Ejecuta la consulta espacial y devuelve la respuesta en el formato pedido."""
     key = _cache_key(poligono_wkt, formato, limite)
@@ -323,7 +332,7 @@ app.add_middleware(
     ],
     allow_methods=["GET", "POST"],
     allow_headers=["X-API-Key", "Content-Type"],
-    expose_headers=["X-Cuota-Restante"],
+    expose_headers=["X-Cuota-Restante", "X-Total-Predios"],
 )
 
 
@@ -347,7 +356,7 @@ async def api_key_middleware(request: Request, call_next):
         return await call_next(request)
     if request.url.path in RUTAS_LIBRES:
         return await call_next(request)
-    key = request.headers.get("X-API-Key")
+    key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
     if not key:
         return JSONResponse({"error": "API key requerida"}, status_code=401)
 
@@ -447,6 +456,7 @@ async def predios_ubigeo(
         wkt = _aplicar_buffer(wkt, buffer_m)
 
     content, media_type, headers = _consultar_predios(wkt, formato, _limite_efectivo(request, limite))
+    headers["X-Total-Predios"] = str(_contar_predios(wkt))
     return Response(content=content, media_type=media_type, headers=headers)
 
 
@@ -465,6 +475,7 @@ async def predios_bbox(
     wkt = (f"POLYGON(({minx} {miny}, {maxx} {miny}, {maxx} {maxy}, "
            f"{minx} {maxy}, {minx} {miny}))")
     content, media_type, headers = _consultar_predios(wkt, formato, _limite_efectivo(request, limite))
+    headers["X-Total-Predios"] = str(_contar_predios(wkt))
     return Response(content=content, media_type=media_type, headers=headers)
 
 
@@ -490,6 +501,7 @@ async def predios_geojson(
         wkt = _aplicar_buffer(wkt, buffer_m)
 
     content, media_type, headers = _consultar_predios(wkt, formato, _limite_efectivo(request, limite))
+    headers["X-Total-Predios"] = str(_contar_predios(wkt))
     return Response(content=content, media_type=media_type, headers=headers)
 
 

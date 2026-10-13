@@ -4,6 +4,7 @@ const INDEX_URL = 'data/distritos/index.json';
 const API = (window.SUNARP_CONFIG || {}).API_URL || '';
 const API_KEY = (window.SUNARP_CONFIG || {}).API_KEY || '';
 const LIMITE_VISTA_PREVIA = (window.SUNARP_CONFIG || {}).LIMITE_VISTA_PREVIA || 2000;
+const LIMITE_MAPA = 3000;   // maximo de predios que se pintan en el mapa (evita crashear)
 const BASE_VECTOR = 'https://tiles.openfreemap.org/styles/bright';
 const BASE_BRIGHT = 'https://tiles.openfreemap.org/styles/bright';
 const SAT_SOURCE = {
@@ -882,16 +883,19 @@ class App {
   async buscarPorArea(inputFc) {
     this.setLoading(true);
     try {
-      const url = `${API}/predios?formato=geojson&limite=${LIMITE_VISTA_PREVIA}`;
+      this.areaGeojson = inputFc;
+      const url = `${API}/predios?formato=geojson&limite=${LIMITE_MAPA}`;
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify(inputFc)
       });
       if (!res.ok) throw new Error(`API ${res.status}`);
+      const total = parseInt(res.headers.get('X-Total-Predios') || '0', 10);
       const fc = await res.json();
       this.subset = fc.features || [];
-      this.subsetLimitado = this.subset.length >= LIMITE_VISTA_PREVIA;
+      this.subsetTotal = total || this.subset.length;
+      this.subsetLimitado = this.subsetTotal > this.subset.length;
       this.mostrarResultadoArea();
     } catch (err) {
       console.error(err);
@@ -910,7 +914,9 @@ class App {
       p.innerHTML = 'Ningún predio intersecta tu área.';
       return;
     }
-    p.innerHTML = `<strong id="upload-count">${formatNumber(n)}</strong> predios intersectan tu área.`;
+    const total = this.subsetTotal || n;
+    p.innerHTML = `<strong id="upload-count">${formatNumber(total)}</strong> predios en tu área` +
+      (this.subsetLimitado ? ` <span class="aviso-inline">(${formatNumber(n)} dibujados en el mapa; descarga el archivo para el total)</span>` : '.');
     this.pintarResultadoArea();
   }
 
@@ -941,13 +947,42 @@ class App {
     } catch (_) { /* bbox invalido */ }
   }
 
+  async _descargarArea(formato, ext) {
+    if (!this.areaGeojson) {
+      if (!this.subset || !this.subset.length) return;
+      const blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: this.subset })],
+                            { type: 'application/geo+json' });
+      downloadBlob(blob, `area_${(this.areaNombre || 'seleccion')}_predios.${ext}`);
+      return;
+    }
+    const boton = document.activeElement;
+    if (boton) boton.disabled = true;
+    try {
+      const res = await fetch(`${API}/predios?formato=${formato}&limite=200000`, {
+        method: 'POST',
+        headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.areaGeojson)
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const blob = await res.blob();
+      downloadBlob(blob, `area_${(this.areaNombre || 'seleccion')}_predios.${ext}`);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo descargar el área completa.');
+    } finally {
+      if (boton) boton.disabled = false;
+    }
+  }
+
   downloadSubsetGeojson() {
+    if (this.areaGeojson) return this._descargarArea('geojson', 'geojson');
     if (!this.subset || !this.subset.length) return;
     const blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: this.subset })], { type: 'application/geo+json' });
     downloadBlob(blob, `area_${(this.areaNombre || 'seleccion')}_predios.geojson`);
   }
 
   downloadSubsetCsv() {
+    if (this.areaGeojson) return this._descargarArea('csv', 'csv');
     if (!this.subset || !this.subset.length) return;
     const rows = featuresToCsvRows(this.subset);
     const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
