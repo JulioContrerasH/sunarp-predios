@@ -45,18 +45,7 @@
   <main class="layout">
     <aside id="sidebar" class="sidebar" aria-label="Panel de información">
       <div class="sheet-handle" aria-hidden="true"><span></span></div>
-      <div class="panel-empty" id="panel-empty">
-        <h2>Bienvenido</h2>
-        <p><strong>Sube tu área</strong> (o dibújala en el mapa) y descarga los predios que caen dentro. También puedes buscar un distrito por nombre.</p>
-      </div>
-
-      <div class="panel-content" id="panel-content" hidden>
-        <div class="panel-head">
-          <h2 id="panel-title">Distrito</h2>
-          <nav id="panel-breadcrumb" class="breadcrumb" aria-label="Ubicación"></nav>
-        </div>
-
-        <div class="upload-section">
+        <div class="upload-section" id="area-section">
           <div class="upload-header">
             <h3>Descarga por tu área</h3>
             <span class="badge-beta">nuevo</span>
@@ -83,6 +72,17 @@
               <button class="btn btn-secondary" id="download-subset-xlsx">Excel</button>
             </div>
           </div>
+        </div>
+
+      <div class="panel-empty" id="panel-empty">
+        <h2>Bienvenido</h2>
+        <p><strong>Sube tu área</strong> (o dibújala en el mapa) y descarga los predios que caen dentro. También puedes buscar un distrito por nombre.</p>
+      </div>
+
+      <div class="panel-content" id="panel-content" hidden>
+        <div class="panel-head">
+          <h2 id="panel-title">Distrito</h2>
+          <nav id="panel-breadcrumb" class="breadcrumb" aria-label="Ubicación"></nav>
         </div>
 
         <div class="metrics">
