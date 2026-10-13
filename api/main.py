@@ -294,9 +294,14 @@ app = FastAPI(
 )
 
 
+RUTAS_LIBRES = {"/", "/docs", "/redoc", "/openapi.json", "/favicon.ico"}
+
+
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
-    """Exige X-API-Key y controla la cuota diaria."""
+    """Exige X-API-Key y controla la cuota diaria (salvo la portada y los docs)."""
+    if request.url.path in RUTAS_LIBRES:
+        return await call_next(request)
     key = request.headers.get("X-API-Key")
     if not key:
         return JSONResponse({"error": "API key requerida"}, status_code=401)
@@ -314,6 +319,28 @@ async def api_key_middleware(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Cuota-Restante"] = str(restante)
     return response
+
+
+@app.get("/", include_in_schema=False)
+async def portada():
+    """Portada mínima para abrir en el navegador."""
+    filas = db.execute("SELECT COUNT(*) FROM predios").fetchone()[0]
+    html = f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>API de predios SUNARP</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:640px;margin:48px auto;padding:0 20px;color:#1e293b}}
+code{{background:#f1f5f9;padding:2px 6px;border-radius:4px}}
+a{{color:#2563eb}}</style></head><body>
+<h1>API de predios SUNARP</h1>
+<p>Estado: <strong>operativa</strong> · {filas:,} predios cargados.</p>
+<p>Endpoints: <code>GET /salud</code>, <code>GET /distritos</code>,
+<code>GET /predios?ubigeo=150101</code>, <code>POST /predios</code> (polígono GeoJSON).</p>
+<p>Requieren el header <code>X-API-Key</code>.
+Prueba interactiva: <a href="/docs">/docs</a> (botón <em>Authorize</em> para pegar la clave).</p>
+<p style="color:#64748b;font-size:14px">La información es referencial y no constituye
+publicidad registral; no tiene valor para trámites administrativos ni judiciales.
+Fuente: servicio público Visor BGR de SUNARP.</p>
+</body></html>"""
+    return Response(content=html, media_type="text/html")
 
 
 @app.get("/salud")
