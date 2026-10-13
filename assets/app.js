@@ -797,7 +797,10 @@ class App {
       source: 'pais',
       'source-layer': 'predios',
       minzoom: 8,
-      paint: { 'fill-color': '#7c3aed', 'fill-opacity': 0.45 }
+      paint: {
+        'fill-color': '#7c3aed',
+        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.12, 11, 0.18, 13, 0.26, 16, 0.38]
+      }
     }, antes);
     this.map.addLayer({
       id: 'pais-line',
@@ -807,8 +810,8 @@ class App {
       minzoom: 8,
       paint: {
         'line-color': '#4c1d95',
-        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 14, 0.6, 18, 0.9],
-        'line-opacity': 0.6
+        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.2, 11, 0.4, 14, 0.7, 18, 1.0],
+        'line-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.25, 11, 0.4, 14, 0.6, 18, 0.8]
       }
     }, antes);
     this.ui.tilesBtn.classList.add('activo');
