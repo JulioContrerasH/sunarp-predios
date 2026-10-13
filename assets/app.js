@@ -176,9 +176,6 @@ class App {
     this.map = new maplibregl.Map({
       container: 'map',
       style: BASE_VECTOR,
-      transformRequest: (url) => (API && url.startsWith(API))
-        ? { url, headers: { 'X-API-Key': API_KEY } }
-        : { url },
       center: [-76.2, -10.5],
       zoom: 5,
       attributionControl: true
