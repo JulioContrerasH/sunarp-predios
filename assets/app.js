@@ -154,6 +154,7 @@ class App {
       uploadResult: document.getElementById('upload-result'),
       uploadCount: document.getElementById('upload-count'),
       downloadSubsetGeojson: document.getElementById('download-subset-geojson'),
+      downloadSubsetParquet: document.getElementById('download-subset-parquet'),
       downloadSubsetCsv: document.getElementById('download-subset-csv'),
       downloadSubsetXlsx: document.getElementById('download-subset-xlsx')
     };
@@ -253,6 +254,7 @@ class App {
     this.ui.tilesBtn.addEventListener('click', () => this.toggleTeselas());
     this.ui.drawCancel.addEventListener('click', () => this.cancelarDibujo());
     this.ui.downloadSubsetGeojson.addEventListener('click', () => this.downloadSubsetGeojson());
+    this.ui.downloadSubsetParquet.addEventListener('click', () => this.downloadSubsetParquet());
     this.ui.downloadSubsetCsv.addEventListener('click', () => this.downloadSubsetCsv());
     this.ui.downloadSubsetXlsx.addEventListener('click', () => this.downloadSubsetXlsx());
   }
@@ -1032,6 +1034,10 @@ class App {
     if (!this.subset || !this.subset.length) return;
     const blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: this.subset })], { type: 'application/geo+json' });
     downloadBlob(blob, `area_${(this.areaNombre || 'seleccion')}_predios.geojson`);
+  }
+
+  downloadSubsetParquet() {
+    return this._descargarArea('geoparquet', 'parquet');
   }
 
   downloadSubsetCsv() {
