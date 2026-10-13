@@ -593,9 +593,14 @@ class App {
       <div class="popup-pick">
         ${lista.map((f, i) => {
           const p = f.properties;
-          return `<button class="pick-row" data-i="${i}">
-            <span class="pick-partida">${p.PART_REG || 'sin partida'}</span>
-            <span class="pick-meta">${TYPE_LABELS[p._tip] || '—'} · ${formatNumber(p.GEO_AREA || 0)} m²</span>
+          const color = TYPE_COLORS[p._tip] || TYPE_FALLBACK;
+          return `<button class="pick-row" data-i="${i}" data-id="${f.id}">
+            <span class="pick-chip" style="background:${color}"></span>
+            <span class="pick-text">
+              <span class="pick-partida">${p.PART_REG || 'sin partida'}</span>
+              <span class="pick-meta">${TYPE_LABELS[p._tip] || '—'} · ${formatNumber(p.GEO_AREA || 0)} m²</span>
+            </span>
+            <span class="pick-chevron" aria-hidden="true">›</span>
           </button>`;
         }).join('')}
       </div>`;
@@ -609,6 +614,17 @@ class App {
       btn.addEventListener('click', () => {
         const f = lista[Number(btn.dataset.i)];
         this.mostrarDetalle(this.popup.getLngLat(), f.properties);
+      });
+      btn.addEventListener('mouseenter', () => {
+        const id = Number(btn.dataset.id);
+        if (!Number.isNaN(id) && this.map.getLayer('predios-hover')) {
+          this.map.setFilter('predios-hover', ['==', ['id'], id]);
+        }
+      });
+      btn.addEventListener('mouseleave', () => {
+        if (this.map.getLayer('predios-hover')) {
+          this.map.setFilter('predios-hover', ['boolean', false]);
+        }
       });
     });
   }
