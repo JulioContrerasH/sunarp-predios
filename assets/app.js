@@ -1,4 +1,4 @@
-/* global maplibregl, XLSX, shp, Flatbush, turf */
+/* global maplibregl, XLSX, shp, shpwrite, Flatbush, turf */
 
 const INDEX_URL = 'data/distritos/index.json';
 const BASE_VECTOR = 'https://tiles.openfreemap.org/styles/bright';
@@ -138,6 +138,7 @@ class App {
       ha: document.getElementById('metric-ha'),
       legend: document.getElementById('legend-list'),
       downloadGeojson: document.getElementById('download-geojson'),
+      downloadShp: document.getElementById('download-shp'),
       downloadCsv: document.getElementById('download-csv'),
       downloadXlsx: document.getElementById('download-xlsx'),
       searchWrap: document.querySelector('.search-wrap'),
@@ -221,6 +222,7 @@ class App {
     });
 
     this.ui.downloadGeojson.addEventListener('click', () => this.downloadGeojson());
+    this.ui.downloadShp.addEventListener('click', () => this.downloadShp());
     this.ui.downloadCsv.addEventListener('click', () => this.downloadCsv());
     this.ui.downloadXlsx.addEventListener('click', () => this.downloadXlsx());
 
@@ -576,7 +578,7 @@ class App {
     if (!feats || !feats.length) return;
     const porPartida = new Map();
     for (const f of feats) {
-      const k = f.properties.PART_REG || `${f.properties.OID}-${f.properties.capa}`;
+      const k = `${f.properties.PART_REG || 'x'}|${f.properties.capa || ''}`;
       if (!porPartida.has(k)) porPartida.set(k, f);
     }
     const lista = Array.from(porPartida.values()).sort(
@@ -599,6 +601,7 @@ class App {
             <span class="pick-text">
               <span class="pick-partida">${p.PART_REG || 'sin partida'}</span>
               <span class="pick-meta">${TYPE_LABELS[p._tip] || '—'} · ${formatNumber(p.GEO_AREA || 0)} m²</span>
+              <span class="pick-capa">${(p.capa || '').replace(/^(BGR|BGI)_/, '').replace(/_/g, ' ')}</span>
             </span>
             <span class="pick-chevron" aria-hidden="true">›</span>
           </button>`;
@@ -659,6 +662,35 @@ class App {
     fetch(this.current.archivo)
       .then(r => r.blob())
       .then(blob => downloadBlob(blob, `${this.current.ubigeo}_${this.current.distrito}.geojson`));
+  }
+
+  async downloadShp() {
+    if (!this.current || !this.currentFeatures.length) return;
+    if (typeof shpwrite === 'undefined') {
+      alert('No se pudo cargar el generador de shapefile. Revisa tu conexión.');
+      return;
+    }
+    const fc = { type: 'FeatureCollection', features: this.currentFeatures };
+    const nombre = `${this.current.ubigeo}_${this.current.distrito}`.replace(/[^\w-]+/g, '_');
+    let out;
+    try {
+      out = shpwrite.zip(fc);
+      if (out && typeof out.then === 'function') out = await out;
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo generar el shapefile.');
+      return;
+    }
+    let blob = out;
+    if (typeof out === 'string') {
+      const bin = atob(out);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      blob = new Blob([bytes], { type: 'application/zip' });
+    } else if (!(out instanceof Blob)) {
+      blob = new Blob([out], { type: 'application/zip' });
+    }
+    downloadBlob(blob, `${nombre}_shp.zip`);
   }
 
   downloadCsv() {

@@ -735,3 +735,11 @@ svg { display: block; }
 .pick-row + .pick-row {
   margin-top: 2px;
 }
+
+.pick-capa {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  opacity: .85;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}

@@ -80,6 +80,7 @@
           <h3>Descargar distrito</h3>
           <div class="btn-group">
             <button class="btn btn-primary" id="download-geojson">GeoJSON</button>
+            <button class="btn btn-secondary" id="download-shp" title="Shapefile en .zip (nombres de campo truncados a 10 caracteres)">SHP</button>
             <button class="btn btn-secondary" id="download-csv">CSV</button>
             <button class="btn btn-secondary" id="download-xlsx">Excel</button>
           </div>
@@ -130,6 +131,7 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/shpjs@4.0.4/dist/shp.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatbush@4.2.0/flatbush.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/shp-write@0.3.2/shpwrite.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <script type="module" src="assets/app.js"></script>
 </body>
