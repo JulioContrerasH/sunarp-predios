@@ -991,11 +991,13 @@ class App {
     const bbox = turf.bbox(inputFc);
     const rect = { minX: bbox[0], minY: bbox[1], maxX: bbox[2], maxY: bbox[3] };
     const distritos = [];
+    console.log('LOCAL rect', JSON.stringify(rect));
     for await (const d of flatgeobuf.deserialize(`${R2}/sunarp/capas/distritos_capa.fgb`, rect)) {
       try {
         if (turf.booleanIntersects(d, inputFc)) distritos.push(d);
       } catch (_) { /* geometria invalida */ }
     }
+    console.log('LOCAL distritos', distritos.length);
     const vistos = new Set();
     const salida = [];
     const tope = LIMITE_MAPA_CFG * 2;
@@ -1015,6 +1017,7 @@ class App {
       } catch (err) {
         console.warn('distrito', ubigeo, err);
       }
+      console.log('LOCAL tras', ubigeo, salida.length);
       if (salida.length >= tope) break;
     }
     return { type: 'FeatureCollection', features: salida };
