@@ -333,6 +333,9 @@ RUTAS_LIBRES = {"/", "/docs", "/redoc", "/openapi.json", "/favicon.ico"}
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
     """Exige X-API-Key y controla la cuota diaria (salvo la portada y los docs)."""
+    if request.method == "OPTIONS":
+        # el preflight CORS lo responde CORSMiddleware, no debe pedir clave
+        return await call_next(request)
     if request.url.path in RUTAS_LIBRES:
         return await call_next(request)
     key = request.headers.get("X-API-Key")
