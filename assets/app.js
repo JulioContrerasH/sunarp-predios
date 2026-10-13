@@ -572,9 +572,48 @@ class App {
 
   onClick(e) {
     e.preventDefault();
-    if (!e.features || !e.features.length) return;
-    const f = e.features[0];
-    const p = f.properties;
+    const feats = this.map.queryRenderedFeatures(e.point, { layers: ['predios-fill'] });
+    if (!feats || !feats.length) return;
+    const porPartida = new Map();
+    for (const f of feats) {
+      const k = f.properties.PART_REG || `${f.properties.OID}-${f.properties.capa}`;
+      if (!porPartida.has(k)) porPartida.set(k, f);
+    }
+    const lista = Array.from(porPartida.values()).sort(
+      (a, b) => (a.properties.GEO_AREA || 0) - (b.properties.GEO_AREA || 0));
+
+    if (lista.length === 1) {
+      this.mostrarDetalle(e.lngLat, lista[0].properties);
+      return;
+    }
+
+    const html = `
+      <h3 class="popup-title">${lista.length} predios en este punto</h3>
+      <p class="popup-hint">Elige cuál ver (del más chico al más grande):</p>
+      <div class="popup-pick">
+        ${lista.map((f, i) => {
+          const p = f.properties;
+          return `<button class="pick-row" data-i="${i}">
+            <span class="pick-partida">${p.PART_REG || 'sin partida'}</span>
+            <span class="pick-meta">${TYPE_LABELS[p._tip] || '—'} · ${formatNumber(p.GEO_AREA || 0)} m²</span>
+          </button>`;
+        }).join('')}
+      </div>`;
+    this.closePopup();
+    this.popup = new maplibregl.Popup({ maxWidth: '340px', anchor: 'bottom' })
+      .setLngLat(e.lngLat)
+      .setHTML(html)
+      .addTo(this.map);
+    const el = this.popup.getElement();
+    el.querySelectorAll('.pick-row').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = lista[Number(btn.dataset.i)];
+        this.mostrarDetalle(this.popup.getLngLat(), f.properties);
+      });
+    });
+  }
+
+  mostrarDetalle(lngLat, p) {
     const html = `
       <h3 class="popup-title">Predio ${p.PART_REG || '—'}</h3>
       <div class="popup-row"><span class="label">Oficina</span><span class="value">${p.COD_OFRE || '—'}</span></div>
@@ -587,7 +626,7 @@ class App {
     `;
     this.closePopup();
     this.popup = new maplibregl.Popup({ maxWidth: '320px', anchor: 'bottom' })
-      .setLngLat(e.lngLat)
+      .setLngLat(lngLat)
       .setHTML(html)
       .addTo(this.map);
   }

@@ -661,3 +661,50 @@ svg { display: block; }
   .metric-value { font-size: 15px; }
   .btn { font-size: 12px; }
 }
+
+/* Selector de predios superpuestos */
+.popup-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.popup-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: background .12s, border-color .12s;
+}
+
+.pick-row:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.pick-partida {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.pick-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
