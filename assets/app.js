@@ -1025,7 +1025,9 @@ class App {
     try {
       this.areaGeojson = inputFc;
       if (R2 && !API) {
+        console.log('AREA-R2 inicio');
         const fc = await this.buscarPorAreaLocal(inputFc);
+        console.log('AREA-R2 resultado', fc.features.length);
         this.subset = fc.features.slice(0, LIMITE_MAPA_CFG);
         this.subsetTotal = fc.features.length;
         this.subsetLimitado = fc.features.length > this.subset.length;
