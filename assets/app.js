@@ -1,9 +1,10 @@
-/* global maplibregl, XLSX, shp, Flatbush, turf */
+/* global maplibregl, XLSX, shp, flatgeobuf, Flatbush, turf */
 
 const INDEX_URL = 'data/distritos/index.json';
 const API = (window.SUNARP_CONFIG || {}).API_URL || '';
 const API_KEY = (window.SUNARP_CONFIG || {}).API_KEY || '';
-const LIMITE_VISTA_PREVIA = (window.SUNARP_CONFIG || {}).LIMITE_VISTA_PREVIA || 2000;
+const R2 = (window.SUNARP_CONFIG || {}).R2_URL || '';
+const LIMITE_MAPA_CFG = (window.SUNARP_CONFIG || {}).LIMITE_MAPA || 30000;
 const LIMITE_MAPA = 3000;   // maximo de predios que se pintan en el mapa (evita crashear)
 const BASE_VECTOR = 'https://tiles.openfreemap.org/styles/bright';
 const BASE_BRIGHT = 'https://tiles.openfreemap.org/styles/bright';
@@ -258,12 +259,21 @@ class App {
 
   async loadDistricts() {
     try {
-      this.districts = (API && API_KEY) ? await this.loadIndexApi() : await loadIndex();
+      if (R2) {
+        const res = await fetch(`${R2}/sunarp/distritos/index_web.json`);
+        if (!res.ok) throw new Error(`R2 ${res.status}`);
+        this.districts = await res.json();
+      } else if (API && API_KEY) {
+        this.districts = await this.loadIndexApi();
+      } else {
+        this.districts = await loadIndex();
+      }
+      if (R2) this.districts = await this.mezclarDemo(this.districts);
     } catch (err) {
+      console.error(err);
       try {
         this.districts = await loadIndex();
       } catch (err2) {
-        console.error(err2);
         this.ui.results.innerHTML = '<li class="no-results">Error cargando distritos.</li>';
         this.ui.results.hidden = false;
         return;
@@ -272,6 +282,22 @@ class App {
     if (this.districts.length === 1) {
       this.selectDistrict(this.districts[0]);
     }
+  }
+
+  async mezclarDemo(datos) {
+    // los 3 distritos de demo tienen archivo local (carga instantánea y completa)
+    const locales = await loadIndex().catch(() => []);
+    const porUbigeo = new Map(locales.map(d => [d.ubigeo, d]));
+    return datos.map(d => ({ ...d, ...(porUbigeo.get(d.ubigeo) || {}) }));
+  }
+
+  async cargarFgb(url, max) {
+    const feats = [];
+    for await (const f of flatgeobuf.deserialize(url)) {
+      feats.push(f);
+      if (feats.length >= max) break;
+    }
+    return { type: 'FeatureCollection', features: feats };
   }
 
   async loadIndexApi() {
@@ -289,7 +315,7 @@ class App {
   }
 
   async cargarDesdeApi(d) {
-    const url = `${API}/predios?ubigeo=${encodeURIComponent(d.ubigeo)}&formato=geojson&limite=${LIMITE_VISTA_PREVIA}`;
+    const url = `${API}/predios?ubigeo=${encodeURIComponent(d.ubigeo)}&formato=geojson&limite=${LIMITE_MAPA_CFG}&api_key=${encodeURIComponent(API_KEY)}`;
     const res = await fetch(url, { headers: { 'X-API-Key': API_KEY } });
     if (!res.ok) throw new Error(`API ${res.status}`);
     const fc = await res.json();
@@ -305,8 +331,13 @@ class App {
       this.limitado = false;
       return res.json();
     }
+    if (d.fgb && R2) {
+      const fc = await this.cargarFgb(d.fgb, LIMITE_MAPA_CFG);
+      this.limitado = fc.features.length >= LIMITE_MAPA_CFG;
+      return fc;
+    }
     if (API && API_KEY) return this.cargarDesdeApi(d);
-    throw new Error('Distrito no disponible en la demo');
+    throw new Error('Distrito no disponible');
   }
 
   onSearch(query) {
