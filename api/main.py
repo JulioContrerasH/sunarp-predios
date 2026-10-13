@@ -389,6 +389,10 @@ async def distritos(q: str = Query("", description="Búsqueda sin tildes")):
     with open(INDEX_JSON, "r", encoding="utf-8") as f:
         index = json.load(f)
 
+    # no exponer rutas de archivos internos
+    index = [{k: v for k, v in item.items() if k not in ("archivo", "bytes")}
+             for item in index]
+
     if not q:
         return index
 

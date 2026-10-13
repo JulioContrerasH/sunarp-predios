@@ -259,7 +259,12 @@ class App {
     const datos = await res.json();
     const locales = await loadIndex().catch(() => []);
     const porUbigeo = new Map(locales.map(d => [d.ubigeo, d]));
-    return datos.map(d => ({ ...d, ...(porUbigeo.get(d.ubigeo) || {}) }));
+    return datos.map(d => {
+      const api = { ...d };
+      delete api.archivo;
+      delete api.bytes;
+      return { ...api, ...(porUbigeo.get(d.ubigeo) || {}) };
+    });
   }
 
   async cargarDesdeApi(d) {
@@ -272,7 +277,8 @@ class App {
   }
 
   async cargarDistrito(d) {
-    if (d.archivo) {
+    const esLocal = d.archivo && /^data\/distritos\/[\w-]+\.geojson$/.test(d.archivo);
+    if (esLocal) {
       const res = await fetch(d.archivo);
       if (!res.ok) throw new Error(`No se pudo cargar ${d.archivo}`);
       this.limitado = false;
