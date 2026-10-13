@@ -997,7 +997,8 @@ class App {
       return;
     }
     const inputFc = { type: 'FeatureCollection', features: inputFeatures };
-    this.areaNombre = file.name.replace(/\.(geojson|json|zip)$/i, '');
+    const nombreArchivo = (archivos[0] && archivos[0].name) || 'area';
+    this.areaNombre = nombreArchivo.replace(/\.(geojson|json|zip|shp|dbf|shx|prj)$/i, '');
 
     if (API && API_KEY) {
       await this.buscarPorArea(inputFc);
@@ -1006,7 +1007,6 @@ class App {
 
     // Sin API: se resuelve en el navegador con la capa de distritos y los FGB de R2
     if (R2) {
-      this.areaNombre = file.name.replace(/\.(geojson|json|zip)$/i, '');
       await this.buscarPorArea(inputFc);
       return;
     }
