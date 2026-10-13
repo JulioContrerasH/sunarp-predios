@@ -328,15 +328,17 @@ class App {
   }
 
   toggleBaseLayer() {
-    if (this.baseMode === 'vector') {
-      this.map.setStyle(BASE_SATELLITE);
-      this.baseMode = 'satellite';
-      this.ui.layer.title = 'Cambiar a vector';
-    } else {
-      this.map.setStyle(BASE_VECTOR);
-      this.baseMode = 'vector';
-      this.ui.layer.title = 'Cambiar a satélite';
-    }
+    const aSatelite = this.baseMode === 'vector';
+    this.baseMode = aSatelite ? 'satellite' : 'vector';
+    this.ui.layer.title = aSatelite ? 'Cambiar a vector' : 'Cambiar a satélite';
+    this.map.setStyle(aSatelite ? BASE_SATELLITE : BASE_VECTOR);
+    const readd = () => {
+      if (this.current && this.currentFeatures.length && !this.map.getLayer('predios-fill')) {
+        this.renderDistrictLayer();
+      }
+    };
+    this.map.once('style.load', readd);
+    setTimeout(readd, 1400);
   }
 
   async selectDistrict(d) {
@@ -678,4 +680,4 @@ class App {
 
 window.SunarpUtils = { normalizeType, formatNumber, formatAreaHa, featuresToCsvRows, featuresToWorksheet, downloadBlob };
 
-new App();
+window.__sunarp = new App();
