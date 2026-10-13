@@ -7,7 +7,9 @@
   "n_predios": 4455,
   "area_total_m2": 716464812.48,
   "archivo": "data/distritos/040702.geojson",
-  "bytes_geojson": 2995667,
+  "bytes": 2995667,
+  "shp": "data/distritos/040702_shp.zip",
+  "bytes_shp": 486508,
   "demo": true
  },
  {
@@ -18,7 +20,9 @@
   "n_predios": 4706,
   "area_total_m2": 902254751.41,
   "archivo": "data/distritos/040706.geojson",
-  "bytes_geojson": 3491872,
+  "bytes": 3491872,
+  "shp": "data/distritos/040706_shp.zip",
+  "bytes_shp": 583354,
   "demo": true
  },
  {
@@ -29,7 +33,9 @@
   "n_predios": 18815,
   "area_total_m2": 35751338.12,
   "archivo": "data/distritos/150101.geojson",
-  "bytes_geojson": 11664629,
+  "bytes": 11664629,
+  "shp": "data/distritos/150101_shp.zip",
+  "bytes_shp": 1793015,
   "demo": true
  }
 ]

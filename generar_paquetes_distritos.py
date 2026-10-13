@@ -14,7 +14,10 @@ Uso:
 
 import argparse
 import json
+import shutil
 import sys
+import tempfile
+import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -36,6 +39,7 @@ COLUMNAS = ["PART_REG", "COD_OFRE", "TIP_PRED", "GEO_AREA", "FEC_TIT_F",
 
 MAX_WORKERS = 8
 FORMATO = "geojson"
+SHP = False
 
 
 def geometria_del_distrito(distritos, ubigeo):
@@ -79,6 +83,15 @@ def exportar_distrito(ubigeo, distritos, parquet):
         gdf.to_file(destino, driver="GeoJSON", encoding="utf-8")
     if FORMATO in ("fgb", "both"):
         gdf.to_file(destino.with_suffix(".fgb"), driver="FlatGeobuf", encoding="utf-8")
+    if SHP:
+        tmp = Path(tempfile.mkdtemp(prefix="shp_"))
+        base = tmp / f"{ubigeo}"
+        gdf.to_file(base.with_suffix(".shp"), driver="ESRI Shapefile", encoding="utf-8")
+        zip_destino = SALIDA / f"{ubigeo}_shp.zip"
+        with zipfile.ZipFile(zip_destino, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in sorted(tmp.glob(f"{ubigeo}.*")):
+                z.write(f, f.name)
+        shutil.rmtree(tmp, ignore_errors=True)
 
     return {
         "ubigeo": ubigeo,
@@ -90,6 +103,8 @@ def exportar_distrito(ubigeo, distritos, parquet):
         "archivo": (f"data/distritos/{ubigeo}.fgb" if FORMATO == "fgb"
                     else f"data/distritos/{ubigeo}.geojson"),
         "bytes": destino.with_suffix(".fgb" if FORMATO == "fgb" else ".geojson").stat().st_size,
+        **({"shp": f"data/distritos/{ubigeo}_shp.zip",
+            "bytes_shp": (SALIDA / f"{ubigeo}_shp.zip").stat().st_size} if SHP else {}),
         "demo": ubigeo in DEMO,
     }
 
@@ -100,7 +115,7 @@ def _gj_a_wkt(gj):
 
 
 def main():
-    global FORMATO, SALIDA
+    global FORMATO, SALIDA, SHP
     ap = argparse.ArgumentParser()
     ap.add_argument("--demo", action="store_true")
     ap.add_argument("--todos", action="store_true")
@@ -108,8 +123,10 @@ def main():
     ap.add_argument("--parquet", default=str(PARQUET))
     ap.add_argument("--formato", default="geojson", choices=["geojson", "fgb", "both"])
     ap.add_argument("--salida", default=None)
+    ap.add_argument("--shp", action="store_true", help="genera tambien <ubigeo>_shp.zip")
     args = ap.parse_args()
     FORMATO = args.formato
+    SHP = args.shp
     if args.salida:
         SALIDA = Path(args.salida)
 

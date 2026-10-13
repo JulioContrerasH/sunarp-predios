@@ -1,4 +1,4 @@
-/* global maplibregl, XLSX, shp, shpwrite, Flatbush, turf */
+/* global maplibregl, XLSX, shp, Flatbush, turf */
 
 const INDEX_URL = 'data/distritos/index.json';
 const BASE_VECTOR = 'https://tiles.openfreemap.org/styles/bright';
@@ -664,33 +664,19 @@ class App {
       .then(blob => downloadBlob(blob, `${this.current.ubigeo}_${this.current.distrito}.geojson`));
   }
 
-  async downloadShp() {
-    if (!this.current || !this.currentFeatures.length) return;
-    if (typeof shpwrite === 'undefined') {
-      alert('No se pudo cargar el generador de shapefile. Revisa tu conexión.');
+  downloadShp() {
+    if (!this.current) return;
+    if (!this.current.shp) {
+      alert('El shapefile de este distrito todavía no está disponible. Usa GeoJSON.');
       return;
     }
-    const fc = { type: 'FeatureCollection', features: this.currentFeatures };
-    const nombre = `${this.current.ubigeo}_${this.current.distrito}`.replace(/[^\w-]+/g, '_');
-    let out;
-    try {
-      out = shpwrite.zip(fc);
-      if (out && typeof out.then === 'function') out = await out;
-    } catch (err) {
-      console.error(err);
-      alert('No se pudo generar el shapefile.');
-      return;
-    }
-    let blob = out;
-    if (typeof out === 'string') {
-      const bin = atob(out);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      blob = new Blob([bytes], { type: 'application/zip' });
-    } else if (!(out instanceof Blob)) {
-      blob = new Blob([out], { type: 'application/zip' });
-    }
-    downloadBlob(blob, `${nombre}_shp.zip`);
+    fetch(this.current.shp)
+      .then(r => {
+        if (!r.ok) throw new Error('no disponible');
+        return r.blob();
+      })
+      .then(blob => downloadBlob(blob, `${this.current.ubigeo}_${this.current.distrito}_shp.zip`.replace(/[^\w.-]+/g, '_')))
+      .catch(() => alert('No se pudo descargar el shapefile. Usa GeoJSON.'));
   }
 
   downloadCsv() {
