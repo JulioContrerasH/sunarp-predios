@@ -379,6 +379,69 @@ async def api_key_middleware(request: Request, call_next):
     return response
 
 
+def _bbox_tile(z: int, x: int, y: int) -> tuple[float, float, float, float]:
+    """BBox geografico de la tesela XYZ."""
+    import math
+    n = 2 ** z
+    lon1 = x / n * 360 - 180
+    lon2 = (x + 1) / n * 360 - 180
+    lat1 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))
+    lat2 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n))))
+    return lon1, lat2, lon2, lat1
+
+
+# Detalle por zoom: a menos zoom, solo predios grandes y geometria simplificada.
+# (min_area en grados^2 ~ 1e-8 = 123 m2; 1e-6 = 1.2 ha; 1e-4 = 1.2 km2)
+_DETALLE = [
+    (9,  1e-4,  2e-4),
+    (10, 1e-4,  2e-4),
+    (11, 1e-5,  5e-5),
+    (12, 1e-6,  1e-5),
+    (13, 1e-7,  2e-6),
+    (14, 1e-8,  4e-7),
+]
+
+
+def _parametros_zoom(z: int) -> tuple[float, float]:
+    """(area_minima, tolerancia_simplificacion) para el zoom dado."""
+    for zmax, area, tol in _DETALLE:
+        if z <= zmax:
+            return area, tol
+    return 0.0, 0.0
+
+
+@app.get("/tiles/{z}/{x}/{y}.mvt", include_in_schema=True)
+async def tiles(request: Request, z: int, x: int, y: int):
+    """Tesela vectorial (MVT) de predios, generalizada segun el zoom."""
+    if not (0 <= z <= 18):
+        raise HTTPException(status_code=400, detail="zoom fuera de rango")
+    lon1, lat2, lon2, lat1 = _bbox_tile(z, x, y)
+    area_min, tol = _parametros_zoom(z)
+    env = f"ST_MakeEnvelope({lon1},{lat2},{lon2},{lat1})"
+    box = f"ST_MakeBox2D(ST_Point({lon1},{lat2}), ST_Point({lon2},{lat1}))"
+    geom = ("CASE WHEN ST_IsValid(geometry) THEN geometry ELSE ST_MakeValid(geometry) END"
+            if tol == 0 else
+            f"ST_SimplifyPreserveTopology(CASE WHEN ST_IsValid(geometry) THEN geometry "
+            f"ELSE ST_MakeValid(geometry) END, {tol})")
+    filtro_area = f"AND GEO_AREA >= {area_min * 12300000000:.1f}" if area_min else ""
+    sql = f"""
+        WITH t AS (
+          SELECT ST_AsMVTGeom({geom}, {box}, 4096, 64, true) AS geom,
+                 PART_REG, TIP_PRED, GEO_AREA
+          FROM predios
+          WHERE ST_Intersects(geometry, {env}) {filtro_area}
+          LIMIT 20000
+        )
+        SELECT ST_AsMVT(t, 'predios', 4096, 'geom') FROM t
+    """
+    blob = db.execute(sql).fetchone()[0]
+    return Response(
+        content=blob or b"",
+        media_type="application/vnd.mapbox-vector-tile",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
 @app.get("/", include_in_schema=False)
 async def portada():
     """Portada mínima para abrir en el navegador."""
