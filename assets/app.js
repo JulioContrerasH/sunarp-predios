@@ -3,24 +3,13 @@
 const INDEX_URL = 'data/distritos/index.json';
 const BASE_VECTOR = 'https://tiles.openfreemap.org/styles/bright';
 const BASE_BRIGHT = 'https://tiles.openfreemap.org/styles/bright';
-const BASE_SATELLITE = {
-  version: 8,
-  sources: {
-    satellite: {
-      type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
-      attribution: 'Esri, Maxar, Earthstar Geographics'
-    }
-  },
-  layers: [{
-    id: 'satellite',
-    type: 'raster',
-    source: 'satellite',
-    minzoom: 0,
-    maxzoom: 22
-  }]
+const SAT_SOURCE = {
+  type: 'raster',
+  tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+  tileSize: 256,
+  attribution: 'Esri, Maxar, Earthstar Geographics'
 };
+const SAT_LAYER = 'satelite';
 
 const TYPE_COLORS = {
   '03': '#f59e0b',
@@ -187,10 +176,12 @@ class App {
 
     this.map.on('load', () => {
       this.map.getCanvas().style.cursor = '';
+      this.addSatelliteLayer();
       this.loadDistricts();
     });
 
     this.map.on('style.load', () => {
+      this.addSatelliteLayer();
       if (this.current) this.renderDistrictLayer();
     });
 
@@ -331,16 +322,27 @@ class App {
     const aSatelite = this.baseMode === 'vector';
     this.baseMode = aSatelite ? 'satellite' : 'vector';
     this.ui.layer.title = aSatelite ? 'Cambiar a vector' : 'Cambiar a satélite';
-    this.map.setStyle(aSatelite ? BASE_SATELLITE : BASE_VECTOR);
-    const readd = () => {
-      if (this.current && this.currentFeatures.length && !this.map.getLayer('predios-fill')) {
-        this.renderDistrictLayer();
-      } else {
-        this.applyPaintForMode();
-      }
+    if (!this.map.getLayer(SAT_LAYER)) this.addSatelliteLayer();
+    if (this.map.getLayer(SAT_LAYER)) {
+      this.map.setLayoutProperty(SAT_LAYER, 'visibility', aSatelite ? 'visible' : 'none');
+    }
+    this.applyPaintForMode();
+  }
+
+  addSatelliteLayer() {
+    if (this.map.getLayer(SAT_LAYER)) return;
+    if (!this.map.getSource('satelite')) this.map.addSource('satelite', SAT_SOURCE);
+    const capas = (this.map.getStyle() && this.map.getStyle().layers) || [];
+    const primera = capas.find(l => l.type !== 'background');
+    const opciones = {
+      id: SAT_LAYER,
+      type: 'raster',
+      source: 'satelite',
+      layout: { visibility: this.baseMode === 'satellite' ? 'visible' : 'none' },
+      paint: { 'raster-opacity': 1 }
     };
-    this.map.once('style.load', readd);
-    setTimeout(readd, 1400);
+    if (primera) this.map.addLayer(opciones, primera.id);
+    else this.map.addLayer(opciones);
   }
 
   async selectDistrict(d) {
