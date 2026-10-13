@@ -817,6 +817,10 @@ class App {
       }
     }, antes);
     this.ui.tilesBtn.classList.add('activo');
+    if (this.map.getZoom() < 10) {
+      // a zoom de país no hay detalle: acercarse a una zona con predios
+      this.map.flyTo({ center: [-77.03, -12.05], zoom: 12, duration: 2000 });
+    }
   }
 
   iniciarDibujo() {
