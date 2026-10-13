@@ -75,3 +75,9 @@ Requiere el parquet nacional consolidado y el shapefile distrital del INEI 2023
 - V2: API para polígonos arbitrarios (FastAPI + DuckDB), claves y cuotas.
 - V3: paquetes completos por distrito, MCP para agentes IA y enlace a documentos
   de partida (Conoce Aquí).
+
+## Cache del navegador
+
+Al cambiar `assets/app.js`, `assets/styles.css` o `config.js`, sube la versión en las tres
+etiquetas de `index.html` (`?v=AAAAMMDDx`). Si no, los navegadores siguen usando el archivo
+viejo y parecen "bugs" que ya están arreglados.
