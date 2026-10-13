@@ -17,6 +17,7 @@ from typing import Any
 import duckdb
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, Response
 
 DEFAULT_PARQUET = "/data/users/julio/Notes/01-Projects/sunarp_request/assets/parquets/predios_nacional.parquet"
@@ -322,6 +323,8 @@ app = FastAPI(
     description="Consulta espacial del consolidado nacional de predios.",
     lifespan=lifespan,
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 app.add_middleware(
     CORSMiddleware,
