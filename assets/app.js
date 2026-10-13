@@ -956,9 +956,14 @@ class App {
       return;
     }
 
-    // Sin API: interseccion local contra el distrito cargado
+    // Sin API: se resuelve en el navegador con la capa de distritos y los FGB de R2
+    if (R2) {
+      this.areaNombre = file.name.replace(/\.(geojson|json|zip)$/i, '');
+      await this.buscarPorArea(inputFc);
+      return;
+    }
     if (!this.current || !this.currentFeatures.length) {
-      alert('Sin API configurada solo se puede comparar contra el distrito cargado.');
+      alert('Sube un distrito primero para poder comparar.');
       this.ui.upload.value = '';
       return;
     }
@@ -979,10 +984,72 @@ class App {
     this.mostrarResultadoArea();
   }
 
+  async cargarDistritosCapa() {
+    if (this.distritosCapa) return this.distritosCapa;
+    if (!R2) return null;
+    const rect = { minX: -81.5, minY: -18.5, maxX: -68.4, maxY: 0.5 };
+    const capa = [];
+    for await (const f of flatgeobuf.deserialize(`${R2}/sunarp/capas/distritos_capa.fgb`, rect)) {
+      capa.push(f);
+    }
+    const index = new Flatbush(capa.length);
+    for (const f of capa) {
+      const b = turf.bbox(f);
+      index.add(b[0], b[1], b[2], b[3]);
+    }
+    index.finish();
+    this.distritosCapa = { features: capa, index };
+    return this.distritosCapa;
+  }
+
+  async buscarPorAreaLocal(inputFc) {
+    // resolucion en el navegador: distritos que tocan el area -> predios de sus FGB
+    const capa = await this.cargarDistritosCapa();
+    if (!capa) throw new Error('Sin capa de distritos');
+    const bbox = turf.bbox(inputFc);
+    const ids = capa.index.search(bbox[0], bbox[1], bbox[2], bbox[3]);
+    const distritos = ids.map(i => capa.features[i])
+      .filter(d => {
+        try { return turf.booleanIntersects(d, inputFc); } catch (_) { return false; }
+      });
+    const rect = { minX: bbox[0], minY: bbox[1], maxX: bbox[2], maxY: bbox[3] };
+    const vistos = new Set();
+    const salida = [];
+    for (const d of distritos) {
+      const ubigeo = d.properties.UBIGEO;
+      let n = 0;
+      try {
+        for await (const f of flatgeobuf.deserialize(`${R2}/sunarp/distritos/${ubigeo}.fgb`, rect)) {
+          const clave = `${f.properties.PART_REG}|${f.properties.OID}`;
+          if (vistos.has(clave)) continue;
+          try {
+            if (!turf.booleanIntersects(f, inputFc)) continue;
+          } catch (_) { continue; }
+          vistos.add(clave);
+          salida.push(f);
+          n++;
+          if (salida.length >= LIMITE_MAPA_CFG * 2) break;
+        }
+      } catch (err) {
+        console.warn('distrito', ubigeo, err);
+      }
+      if (salida.length >= LIMITE_MAPA_CFG * 2) break;
+    }
+    return { type: 'FeatureCollection', features: salida };
+  }
+
   async buscarPorArea(inputFc) {
     this.setLoading(true);
     try {
       this.areaGeojson = inputFc;
+      if (R2 && !API) {
+        const fc = await this.buscarPorAreaLocal(inputFc);
+        this.subset = fc.features.slice(0, LIMITE_MAPA_CFG);
+        this.subsetTotal = fc.features.length;
+        this.subsetLimitado = fc.features.length > this.subset.length;
+        this.mostrarResultadoArea();
+        return;
+      }
       const url = `${API}/predios?formato=geojson&limite=${LIMITE_MAPA}`;
       const res = await fetch(url, {
         method: 'POST',
