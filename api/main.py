@@ -16,6 +16,7 @@ from typing import Any
 
 import duckdb
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
 DEFAULT_PARQUET = "/data/users/julio/Notes/01-Projects/sunarp_request/assets/parquets/predios_nacional.parquet"
@@ -83,6 +84,18 @@ def crear_clave(nombre: str = "Nuevo usuario", plan: str = "demo", cuota_diaria:
         }
         _guardar_claves()
     return key
+
+
+def _limite_efectivo(request: Request, limite: int | None) -> int:
+    """Aplica el tope de filas del plan de la clave."""
+    tope = _limite_plan(getattr(request.state, "api_key", ""))
+    return tope if limite is None else min(limite, tope)
+
+
+def _limite_plan(api_key: str) -> int:
+    """Tope de filas por respuesta segun el plan de la clave."""
+    plan = (claves.get(api_key) or {}).get("plan", "demo")
+    return {"demo": 2000, "test": 100000}.get(plan, 50000)
 
 
 def _verificar_cuota(api_key: str) -> int | None:
@@ -293,6 +306,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://juliocontrerash.github.io",
+        "http://localhost:8801",
+        "http://127.0.0.1:8801",
+    ],
+    allow_methods=["GET", "POST"],
+    allow_headers=["X-API-Key", "Content-Type"],
+    expose_headers=["X-Cuota-Restante"],
+)
+
 
 RUTAS_LIBRES = {"/", "/docs", "/redoc", "/openapi.json", "/favicon.ico"}
 
@@ -316,6 +341,7 @@ async def api_key_middleware(request: Request, call_next):
             headers={"X-Cuota-Restante": "0"},
         )
 
+    request.state.api_key = key
     response = await call_next(request)
     response.headers["X-Cuota-Restante"] = str(restante)
     return response
@@ -379,6 +405,7 @@ async def distritos(q: str = Query("", description="Búsqueda sin tildes")):
 
 @app.get("/predios")
 async def predios_ubigeo(
+    request: Request,
     ubigeo: str,
     formato: str = Query("geojson", enum=["geojson", "geoparquet", "csv"]),
     limite: int | None = Query(None, ge=1),
@@ -395,12 +422,31 @@ async def predios_ubigeo(
     if buffer_m is not None and buffer_m > 0:
         wkt = _aplicar_buffer(wkt, buffer_m)
 
-    content, media_type, headers = _consultar_predios(wkt, formato, limite)
+    content, media_type, headers = _consultar_predios(wkt, formato, _limite_efectivo(request, limite))
+    return Response(content=content, media_type=media_type, headers=headers)
+
+
+@app.get("/predios_bbox")
+async def predios_bbox(
+    request: Request,
+    minx: float, miny: float, maxx: float, maxy: float,
+    formato: str = Query("geojson", enum=["geojson", "csv"]),
+    limite: int | None = Query(None, ge=1),
+):
+    """Predios dentro de un rectangulo (para cargar mientras se navega el mapa)."""
+    if not (minx < maxx and miny < maxy):
+        raise HTTPException(status_code=400, detail="bbox invalido")
+    if (maxx - minx) > 1.0 or (maxy - miny) > 1.0:
+        raise HTTPException(status_code=400, detail="bbox demasiado grande (max 1 grado)")
+    wkt = (f"POLYGON(({minx} {miny}, {maxx} {miny}, {maxx} {maxy}, "
+           f"{minx} {maxy}, {minx} {miny}))")
+    content, media_type, headers = _consultar_predios(wkt, formato, _limite_efectivo(request, limite))
     return Response(content=content, media_type=media_type, headers=headers)
 
 
 @app.post("/predios")
 async def predios_geojson(
+    request: Request,
     body: dict[str, Any],
     formato: str = Query("geojson", enum=["geojson", "geoparquet", "csv"]),
     limite: int | None = Query(None, ge=1),
@@ -419,7 +465,7 @@ async def predios_geojson(
     if buffer_m is not None and buffer_m > 0:
         wkt = _aplicar_buffer(wkt, buffer_m)
 
-    content, media_type, headers = _consultar_predios(wkt, formato, limite)
+    content, media_type, headers = _consultar_predios(wkt, formato, _limite_efectivo(request, limite))
     return Response(content=content, media_type=media_type, headers=headers)
 
 

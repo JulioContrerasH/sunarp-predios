@@ -1,6 +1,9 @@
 /* global maplibregl, XLSX, shp, Flatbush, turf */
 
 const INDEX_URL = 'data/distritos/index.json';
+const API = (window.SUNARP_CONFIG || {}).API_URL || '';
+const API_KEY = (window.SUNARP_CONFIG || {}).API_KEY || '';
+const LIMITE_VISTA_PREVIA = (window.SUNARP_CONFIG || {}).LIMITE_VISTA_PREVIA || 2000;
 const BASE_VECTOR = 'https://tiles.openfreemap.org/styles/bright';
 const BASE_BRIGHT = 'https://tiles.openfreemap.org/styles/bright';
 const SAT_SOURCE = {
@@ -234,16 +237,49 @@ class App {
 
   async loadDistricts() {
     try {
-      this.districts = await loadIndex();
+      this.districts = (API && API_KEY) ? await this.loadIndexApi() : await loadIndex();
     } catch (err) {
-      console.error(err);
-      this.ui.results.innerHTML = '<li class="no-results">Error cargando distritos.</li>';
-      this.ui.results.hidden = false;
-      return;
+      try {
+        this.districts = await loadIndex();
+      } catch (err2) {
+        console.error(err2);
+        this.ui.results.innerHTML = '<li class="no-results">Error cargando distritos.</li>';
+        this.ui.results.hidden = false;
+        return;
+      }
     }
     if (this.districts.length === 1) {
       this.selectDistrict(this.districts[0]);
     }
+  }
+
+  async loadIndexApi() {
+    const res = await fetch(`${API}/distritos`, { headers: { 'X-API-Key': API_KEY } });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const datos = await res.json();
+    const locales = await loadIndex().catch(() => []);
+    const porUbigeo = new Map(locales.map(d => [d.ubigeo, d]));
+    return datos.map(d => ({ ...d, ...(porUbigeo.get(d.ubigeo) || {}) }));
+  }
+
+  async cargarDesdeApi(d) {
+    const url = `${API}/predios?ubigeo=${encodeURIComponent(d.ubigeo)}&formato=geojson&limite=${LIMITE_VISTA_PREVIA}`;
+    const res = await fetch(url, { headers: { 'X-API-Key': API_KEY } });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const fc = await res.json();
+    this.limitado = (fc.features || []).length < (d.n_predios || 0);
+    return fc;
+  }
+
+  async cargarDistrito(d) {
+    if (d.archivo) {
+      const res = await fetch(d.archivo);
+      if (!res.ok) throw new Error(`No se pudo cargar ${d.archivo}`);
+      this.limitado = false;
+      return res.json();
+    }
+    if (API && API_KEY) return this.cargarDesdeApi(d);
+    throw new Error('Distrito no disponible en la demo');
   }
 
   onSearch(query) {
@@ -366,14 +402,13 @@ class App {
 
     this.setLoading(true);
     try {
-      const res = await fetch(d.archivo);
-      if (!res.ok) throw new Error(`No se pudo cargar ${d.archivo}`);
-      const fc = await res.json();
+      const fc = await this.cargarDistrito(d);
       this.currentFeatures = fc.features || [];
       this.enrichFeatures();
       this.buildIndex();
       this.renderDistrictLayer();
       this.renderLegend();
+      this.mostrarAvisoVistaPrevia();
       this.subset = [];
       this.ui.uploadResult.hidden = true;
       this.ui.upload.value = '';
@@ -382,6 +417,22 @@ class App {
       alert('No se pudo cargar el distrito. Inténtalo de nuevo.');
     } finally {
       this.setLoading(false);
+    }
+  }
+
+  mostrarAvisoVistaPrevia() {
+    let aviso = document.getElementById('aviso-vista-previa');
+    if (!aviso) {
+      aviso = document.createElement('p');
+      aviso.id = 'aviso-vista-previa';
+      aviso.className = 'aviso-vista-previa';
+      this.ui.panelContent.prepend(aviso);
+    }
+    if (this.limitado) {
+      aviso.hidden = false;
+      aviso.textContent = `Vista previa: ${formatNumber(this.currentFeatures.length)} de ${formatNumber(this.current.n_predios)} predios. La descarga completa está disponible con un plan de pago.`;
+    } else {
+      aviso.hidden = true;
     }
   }
 

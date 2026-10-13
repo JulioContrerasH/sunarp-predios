@@ -743,3 +743,22 @@ svg { display: block; }
   text-transform: uppercase;
   letter-spacing: .02em;
 }
+
+.aviso-vista-previa {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@media (prefers-color-scheme: dark) {
+  .aviso-vista-previa {
+    background: #422006;
+    border-color: #a16207;
+    color: #fde68a;
+  }
+}
