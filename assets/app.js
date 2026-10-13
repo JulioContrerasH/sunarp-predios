@@ -984,40 +984,23 @@ class App {
     this.mostrarResultadoArea();
   }
 
-  async cargarDistritosCapa() {
-    if (this.distritosCapa) return this.distritosCapa;
-    if (!R2) return null;
-    const rect = { minX: -81.5, minY: -18.5, maxX: -68.4, maxY: 0.5 };
-    const capa = [];
-    for await (const f of flatgeobuf.deserialize(`${R2}/sunarp/capas/distritos_capa.fgb`, rect)) {
-      capa.push(f);
-    }
-    const index = new Flatbush(capa.length);
-    for (const f of capa) {
-      const b = turf.bbox(f);
-      index.add(b[0], b[1], b[2], b[3]);
-    }
-    index.finish();
-    this.distritosCapa = { features: capa, index };
-    return this.distritosCapa;
-  }
-
   async buscarPorAreaLocal(inputFc) {
-    // resolucion en el navegador: distritos que tocan el area -> predios de sus FGB
-    const capa = await this.cargarDistritosCapa();
-    if (!capa) throw new Error('Sin capa de distritos');
+    // Todo en el navegador: los distritos que tocan el area se piden al FGB de R2
+    // (su indice espacial solo lee los bytes necesarios) y de cada uno se traen
+    // los predios con el mismo rect.
     const bbox = turf.bbox(inputFc);
-    const ids = capa.index.search(bbox[0], bbox[1], bbox[2], bbox[3]);
-    const distritos = ids.map(i => capa.features[i])
-      .filter(d => {
-        try { return turf.booleanIntersects(d, inputFc); } catch (_) { return false; }
-      });
     const rect = { minX: bbox[0], minY: bbox[1], maxX: bbox[2], maxY: bbox[3] };
+    const distritos = [];
+    for await (const d of flatgeobuf.deserialize(`${R2}/sunarp/capas/distritos_capa.fgb`, rect)) {
+      try {
+        if (turf.booleanIntersects(d, inputFc)) distritos.push(d);
+      } catch (_) { /* geometria invalida */ }
+    }
     const vistos = new Set();
     const salida = [];
+    const tope = LIMITE_MAPA_CFG * 2;
     for (const d of distritos) {
       const ubigeo = d.properties.UBIGEO;
-      let n = 0;
       try {
         for await (const f of flatgeobuf.deserialize(`${R2}/sunarp/distritos/${ubigeo}.fgb`, rect)) {
           const clave = `${f.properties.PART_REG}|${f.properties.OID}`;
@@ -1027,13 +1010,12 @@ class App {
           } catch (_) { continue; }
           vistos.add(clave);
           salida.push(f);
-          n++;
-          if (salida.length >= LIMITE_MAPA_CFG * 2) break;
+          if (salida.length >= tope) break;
         }
       } catch (err) {
         console.warn('distrito', ubigeo, err);
       }
-      if (salida.length >= LIMITE_MAPA_CFG * 2) break;
+      if (salida.length >= tope) break;
     }
     return { type: 'FeatureCollection', features: salida };
   }
