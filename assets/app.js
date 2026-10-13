@@ -142,6 +142,9 @@ class App {
       legend: document.getElementById('legend-list'),
       downloadGeojson: document.getElementById('download-geojson'),
       downloadShp: document.getElementById('download-shp'),
+      drawBtn: document.getElementById('draw-btn'),
+      drawHint: document.getElementById('draw-hint'),
+      drawCancel: document.getElementById('draw-cancel'),
       downloadCsv: document.getElementById('download-csv'),
       downloadXlsx: document.getElementById('download-xlsx'),
       searchWrap: document.querySelector('.search-wrap'),
@@ -193,7 +196,18 @@ class App {
     this.map.on('mouseleave', 'predios-fill', () => this.onHoverLeave());
     this.map.on('click', 'predios-fill', (e) => this.onClick(e));
     this.map.on('click', (e) => {
+      if (this.dibujando) {
+        this.puntos.push([e.lngLat.lng, e.lngLat.lat]);
+        this.pintarDibujo();
+        return;
+      }
       if (!e.defaultPrevented) this.closePopup();
+    });
+    this.map.on('dblclick', (e) => {
+      if (this.dibujando) {
+        e.preventDefault();
+        this.cerrarDibujo();
+      }
     });
   }
 
@@ -230,6 +244,8 @@ class App {
     this.ui.downloadXlsx.addEventListener('click', () => this.downloadXlsx());
 
     this.ui.upload.addEventListener('change', (e) => this.onUpload(e));
+    this.ui.drawBtn.addEventListener('click', () => this.iniciarDibujo());
+    this.ui.drawCancel.addEventListener('click', () => this.cancelarDibujo());
     this.ui.downloadSubsetGeojson.addEventListener('click', () => this.downloadSubsetGeojson());
     this.ui.downloadSubsetCsv.addEventListener('click', () => this.downloadSubsetCsv());
     this.ui.downloadSubsetXlsx.addEventListener('click', () => this.downloadSubsetXlsx());
@@ -750,6 +766,66 @@ class App {
     XLSX.utils.book_append_sheet(wb, ws, 'Predios');
     const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${this.current.ubigeo}_${this.current.distrito}.xlsx`);
+  }
+
+  iniciarDibujo() {
+    this.dibujando = true;
+    this.puntos = [];
+    this.map.getCanvas().style.cursor = 'crosshair';
+    this.ui.drawHint.hidden = false;
+    if (!this.map.getSource('dibujo')) {
+      this.map.addSource('dibujo', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      this.map.addLayer({ id: 'dibujo-fill', type: 'fill', source: 'dibujo',
+        paint: { 'fill-color': '#22d3ee', 'fill-opacity': 0.15 } });
+      this.map.addLayer({ id: 'dibujo-line', type: 'line', source: 'dibujo',
+        paint: { 'line-color': '#0891b2', 'line-width': 2 } });
+    }
+  }
+
+  pintarDibujo() {
+    const coords = this.puntos.concat(this.puntos.length > 2 ? [this.puntos[0]] : []);
+    const fuente = this.map.getSource('dibujo');
+    if (!fuente) return;
+    fuente.setData({
+      type: 'FeatureCollection',
+      features: this.puntos.length ? [{
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: coords }
+      }] : []
+    });
+  }
+
+  cancelarDibujo() {
+    this.dibujando = false;
+    this.puntos = [];
+    this.ui.drawHint.hidden = true;
+    this.map.getCanvas().style.cursor = '';
+    const fuente = this.map.getSource('dibujo');
+    if (fuente) fuente.setData({ type: 'FeatureCollection', features: [] });
+  }
+
+  async cerrarDibujo() {
+    if (this.puntos.length < 3) {
+      alert('Marca al menos 3 puntos.');
+      return;
+    }
+    const anillo = this.puntos.concat([this.puntos[0]]);
+    this.dibujando = false;
+    this.ui.drawHint.hidden = true;
+    this.map.getCanvas().style.cursor = '';
+    const fuente = this.map.getSource('dibujo');
+    if (fuente) {
+      fuente.setData({
+        type: 'FeatureCollection',
+        features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [anillo] } }]
+      });
+    }
+    this.areaNombre = 'dibujada';
+    await this.buscarPorArea({
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [anillo] } }]
+    });
   }
 
   async onUpload(e) {

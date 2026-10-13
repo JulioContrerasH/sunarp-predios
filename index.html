@@ -47,13 +47,42 @@
       <div class="sheet-handle" aria-hidden="true"><span></span></div>
       <div class="panel-empty" id="panel-empty">
         <h2>Bienvenido</h2>
-        <p>Usa el buscador para elegir un distrito y visualizar sus predios registrales.</p>
+        <p><strong>Sube tu área</strong> (o dibújala en el mapa) y descarga los predios que caen dentro. También puedes buscar un distrito por nombre.</p>
       </div>
 
       <div class="panel-content" id="panel-content" hidden>
         <div class="panel-head">
           <h2 id="panel-title">Distrito</h2>
           <nav id="panel-breadcrumb" class="breadcrumb" aria-label="Ubicación"></nav>
+        </div>
+
+        <div class="upload-section">
+          <div class="upload-header">
+            <h3>Descarga por tu área</h3>
+            <span class="badge-beta">nuevo</span>
+          </div>
+          <p class="upload-help">Sube un GeoJSON o Shapefile (.zip), o dibuja el área en el mapa.
+          Te devuelve solo los predios de tu área, aunque cruce varios distritos.</p>
+          <div class="area-acciones">
+            <label class="file-input">
+              <input id="upload-file" type="file" accept=".geojson,.json,.zip" />
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+              <span>Subir archivo</span>
+            </label>
+            <button class="btn btn-secondary" id="draw-btn" title="Dibuja un polígono en el mapa">
+              <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              Dibujar área
+            </button>
+          </div>
+          <p id="draw-hint" class="draw-hint" hidden>Haz clic en el mapa para marcar los vértices; <strong>doble clic</strong> para cerrar el área. <button id="draw-cancel" class="link-btn">Cancelar</button></p>
+          <div id="upload-result" class="upload-result" hidden>
+            <p><strong id="upload-count">0</strong> predios intersectan tu área.</p>
+            <div class="btn-group">
+              <button class="btn btn-secondary" id="download-subset-geojson">GeoJSON</button>
+              <button class="btn btn-secondary" id="download-subset-csv">CSV</button>
+              <button class="btn btn-secondary" id="download-subset-xlsx">Excel</button>
+            </div>
+          </div>
         </div>
 
         <div class="metrics">
@@ -86,26 +115,6 @@
           </div>
         </div>
 
-        <div class="upload-section">
-          <div class="upload-header">
-            <h3>Cargar mi área</h3>
-            <span class="badge-beta">beta</span>
-          </div>
-          <p class="upload-help">Sube un GeoJSON o un Shapefile (.zip) para intersectar con el distrito cargado.</p>
-          <label class="file-input">
-            <input id="upload-file" type="file" accept=".geojson,.json,.zip" />
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-            <span>Seleccionar archivo</span>
-          </label>
-          <div id="upload-result" class="upload-result" hidden>
-            <p><strong id="upload-count">0</strong> predios intersectan tu área.</p>
-            <div class="btn-group">
-              <button class="btn btn-secondary" id="download-subset-geojson">GeoJSON</button>
-              <button class="btn btn-secondary" id="download-subset-csv">CSV</button>
-              <button class="btn btn-secondary" id="download-subset-xlsx">Excel</button>
-            </div>
-          </div>
-        </div>
       </div>
     </aside>
 
